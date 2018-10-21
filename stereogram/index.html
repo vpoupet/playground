@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Stereogram</title>
+</head>
+<body>
+    <div><canvas id="stereogram"></canvas></div>
+    <div>
+        <label for="depth_select">Depth map</label>
+        <select name="depth_select" id="depth_select">
+            <option value="maps/shark.png">Shark</option>
+            <option value="maps/fish.png">Fish</option>
+            <option value="maps/virus.png">Virus</option>
+            <option value="maps/world.png">World</option>
+            <option value="maps/teapot.png">Tea pot</option>
+        </select>
+        <label for="depth_picker">or load file</label>
+        <input type="file" name="depth_picker" id="depth_picker" accept="image/*">
+    </div>
+
+    <div>
+        <label for="tile_select">Tile</label>
+        <select name="tile_select" id="tile_select">
+            <option value="tiles/dirt.png">Dirt</option>
+            <option value="tiles/camo.png">Camouflage</option>
+            <option value="tiles/random.png">Random</option>
+            <option value="tiles/stars.png">Stars</option>
+            <option value="tiles/wood.png">Wood</option>
+        </select>
+        <label for="tile_picker">or load file</label>
+        <input type="file" name="tile_picker" id="tile_picker" accept="image/*">
+    </div>
+
+    <p>
+        Generation of 3D stereograms.
+    </p>
+    <ul>
+        <li>Depth map should be a greyscale image (if not, only the red component is considered) in which light
+            pixels are close and dark ones are far.</li>
+        <li>Tile should be a small (ideally no more than 128x128 pixels) tiling pattern.</li>
+    </ul>
+    <script src="stereogram.js"></script>
+</body>
+</html>
