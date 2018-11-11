@@ -4,7 +4,9 @@ This projects is a collection of small experimentations with web technologies (m
 
 ## [Rubik's Cube](./cube/index.html)
 
-TODO: Description
+3D functional representation of the 3x3x3 Rubik's cube using CSS 3D transformations.
+
+Each sticker of the cube is represented by a square `div` element, rotated around the cube with each move. 
 
 ## [Dithering](./dithering/index.html)
 

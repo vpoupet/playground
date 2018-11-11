@@ -4,7 +4,9 @@
 
 body {
   display: flex;
+  flex-direction: column;
   align-items: center;
+  align-content: center;
   justify-content: center;
 }
 
@@ -12,9 +14,9 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 900px;
-  height: 900px;
-  perspective: 600px;
+  width: 600px;
+  height: 600px;
+  perspective: 900px;
   cursor: pointer;
 }
 
@@ -22,12 +24,12 @@ body {
   width: 300px;
   height: 300px;
   position: relative;
-  transform: rotateX(-40deg) rotateY(-30deg);
+  transform: rotateX(-30deg) rotateY(-30deg) translateX(100px) translateY(60px);
   transform-style: preserve-3d;
   transition: transform 0.5s;
 }
 
-.face {
+.rotation {
   transform-style: preserve-3d;
   transition: transform 0.3s;
   transform-origin: 50px 50px;
@@ -41,7 +43,6 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 24pt;
   padding: 4px;
   background-color: black;
 }

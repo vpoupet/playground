@@ -1,40 +1,45 @@
+// face colors
 $front-color: #ffffff
 $right-color: #ff833c
 $top-color: #6cff2a
 $left-color: #ab0004
 $bottom-color: #0000ff
 $back-color: #ffff00
-$side: 300px
+
+// length constants
+$side: 300px  // length of the side of the cube (should be the same value as the one in script.js)
 
 *
   box-sizing: border-box
 
 body
   display: flex
+  flex-direction: column
   align-items: center
+  align-content: center
   justify-content: center
 
 #scene
   display: flex
   align-items: center
   justify-content: center
-  width: 3 * $side
-  height: 3 * $side
-  perspective: 2 * $side
+  width: 2 * $side
+  height: 2 * $side
+  perspective: 3 * $side
   cursor: pointer
 
 .cube
   width: $side
   height: $side
   position: relative
-  transform: rotateX(-40deg) rotateY(-30deg)
+  transform: rotateX(-30deg) rotateY(-30deg) translateX($side / 3) translateY($side / 5)
   transform-style: preserve-3d
   transition: transform .5s
 
-.face
+.rotation
   transform-style: preserve-3d
   transition: transform .3s
-  transform-origin: $side/6 $side/6
+  transform-origin: $side/6 $side/6 // fix rotation origin
 
 .sticker
   position: absolute
@@ -44,7 +49,6 @@ body
   display: flex
   align-items: center
   justify-content: center
-  font-size: 24pt
   padding: 4px
   background-color: black
 
