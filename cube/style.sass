@@ -1,0 +1,66 @@
+$front-color: white
+$right-color: #ff833c
+$top-color: #6cff2a
+$left-color: #ab0004
+$bottom-color: blue
+$back-color: yellow
+$side: 300px
+
+body
+  display: flex
+  align-items: center
+  justify-content: center
+
+#scene
+  display: flex
+  align-items: center
+  justify-content: center
+  width: 3 * $side
+  height: 3 * $side
+  perspective: 2 * $side
+  cursor: pointer
+
+.cube
+  width: $side
+  height: $side
+  position: relative
+  //transform: rotateX(-30deg) rotateY(-40deg) translateZ(-$side / 2) translateX($side / 3) translateY($side / 3)
+  transform: rotateX(-40deg) rotateY(-30deg)
+  transform-style: preserve-3d
+  transition: transform .5s
+
+.face
+  transform-style: preserve-3d
+  transition: transform .5s
+
+.sticker
+  position: absolute
+  width: $side / 3
+  height: $side / 3
+  opacity: .9
+  display: flex
+  align-items: center
+  justify-content: center
+  font-size: 24pt
+  border: 4px black solid
+  border-radius: 4px
+  transition: transform .2s
+
+.face-front
+  background-color: $front-color
+
+.face-back
+  background-color: $back-color
+
+.face-left
+  background-color: $left-color
+
+.face-right
+  background-color: $right-color
+
+.face-top
+  background-color: $top-color
+
+.face-bottom
+  background-color: $bottom-color
+

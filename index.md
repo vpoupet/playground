@@ -2,6 +2,9 @@
 
 This projects is a collection of small experimentations with web technologies (mostly *Javascript*)
 
+## [Rubik's Cube](./cube/index.html)
+
+TODO: Description
 
 ## [Dithering](./dithering/index.html)
 
