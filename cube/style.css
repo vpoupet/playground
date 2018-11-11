@@ -1,3 +1,7 @@
+* {
+  box-sizing: border-box;
+}
+
 body {
   display: flex;
   align-items: center;
@@ -23,6 +27,12 @@ body {
   transition: transform 0.5s;
 }
 
+.face {
+  transform-style: preserve-3d;
+  transition: transform 0.3s;
+  transform-origin: 50px 50px;
+}
+
 .sticker {
   position: absolute;
   width: 100px;
@@ -32,31 +42,29 @@ body {
   align-items: center;
   justify-content: center;
   font-size: 24pt;
-  border: 4px black solid;
-  border-radius: 4px;
-  transition: transform 0.2s;
+  padding: 4px;
+  background-color: black;
 }
 
-.face-front {
+.color-square {
+  width: 100%;
+  height: 100%;
+}
+.face-front .color-square {
   background-color: #ffffff;
 }
-
-.face-back {
+.face-back .color-square {
   background-color: #ffff00;
 }
-
-.face-left {
+.face-left .color-square {
   background-color: #ab0004;
 }
-
-.face-right {
+.face-right .color-square {
   background-color: #ff833c;
 }
-
-.face-top {
+.face-top .color-square {
   background-color: #6cff2a;
 }
-
-.face-bottom {
+.face-bottom .color-square {
   background-color: #0000ff;
 }

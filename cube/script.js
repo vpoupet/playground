@@ -8,6 +8,9 @@ class Sticker {
         this.element = document.createElement("div");
         this.element.classList.add("sticker");
         this.element.classList.add(face);
+        let coloredSquare = document.createElement("div");
+        coloredSquare.classList.add("color-square");
+        this.element.appendChild(coloredSquare);
         this.matrix = mat4.create();
         mat4.translate(this.matrix, this.matrix, [shiftX * length / 3, shiftY * length / 3, length / 2]);
         this.updateElement();
@@ -46,8 +49,10 @@ class Sticker {
     }
 }
 
+
 class Cube {
     constructor() {
+        this.isLocked = false;
         this.element = document.createElement("div");
         this.element.classList.add("cube");
         this.stickers = [];
@@ -90,15 +95,37 @@ class Cube {
     }
 
     move(axis, coordinates, direction) {
+        if (this.isLocked) {
+            return;
+        }
+        this.isLocked = true;
         vec3.multiply(coordinates, coordinates, axis);
+        let face = [];
+        let faceElement = document.createElement("div");
+        this.element.appendChild(faceElement);
+        faceElement.classList.add("face");
+        faceElement.style.transform = "";
         for (let i = 0; i < this.stickers.length; i++) {
             let s = this.stickers[i];
             let t = s.getCoordinates();
             vec3.multiply(t, t, axis);
             if (vec3.equals(coordinates, t)) {
-                s.rotate(direction * Math.PI/2, axis);
+                face.push(s);
+                faceElement.appendChild(s.element);
             }
         }
+        faceElement.addEventListener('transitionend', function() {
+            console.log("end");
+            for (let i = 0; i < face.length; i++) {
+                this.element.appendChild(face[i].element);
+                face[i].rotate(direction * Math.PI/2, axis);
+            }
+            faceElement.remove();
+            this.isLocked = false;
+        }.bind(this), false);
+        setTimeout(function() {
+            faceElement.style.transform = `rotate3d(${axis[0]}, ${axis[1]}, ${axis[2]}, ${90 * direction}deg)`;
+        }, 100);
     }
 
     shuffle(n) {
@@ -115,53 +142,6 @@ class Cube {
     }
 }
 
-function handleKey(event) {
-    switch (event.key) {
-        case "ArrowRight":
-        case "ArrowLeft":
-        case "ArrowUp":
-        case "ArrowDown":
-            event.preventDefault();
-            let element = document.elementFromPoint(mouseX, mouseY);
-            if (element.classList.contains("sticker")) {
-                let s = cube.sticker(element);
-                let t = s.getTranslation();
-                switch(event.key) {
-                    case "ArrowRight":
-                        if (Math.abs(t[1]) >= length / 2) {
-                            cube.move([0, 0, 1], s.getCoordinates(), 1);
-                        } else {
-                            cube.move([0, 1, 0], s.getCoordinates(), 1);
-                        }
-                        break;
-                    case "ArrowLeft":
-                        if (Math.abs(t[1]) >= length / 2) {
-                            cube.move([0, 0, 1], s.getCoordinates(), -1);
-                        } else {
-                            cube.move([0, 1, 0], s.getCoordinates(), -1);
-                        }
-                        break;
-                    case "ArrowUp":
-                        if (Math.abs(t[0]) >= length / 2) {
-                            cube.move([0, 0, 1], s.getCoordinates(), -1);
-                        } else {
-                            cube.move([1, 0, 0], s.getCoordinates(), 1);
-                        }
-                        break;
-                    case "ArrowDown":
-                        if (Math.abs(t[0]) >= length / 2) {
-                            cube.move([0, 0, 1], s.getCoordinates(), 1);
-                        } else {
-                            cube.move([1, 0, 0], s.getCoordinates(), -1);
-                        }
-                        break;
-                }
-            } else {
-
-            }
-    }
-}
-
 window.addEventListener('keydown', function(event) {
     switch (event.key) {
         case "ArrowRight":
@@ -170,7 +150,8 @@ window.addEventListener('keydown', function(event) {
         case "ArrowDown":
             event.preventDefault();
             let element = document.elementFromPoint(mouseX, mouseY);
-            if (element.classList.contains("sticker")) {
+            element = element.closest('.sticker');
+            if (element && element.classList.contains("sticker")) {
                 let s = cube.sticker(element);
                 let t = s.getTranslation();
                 switch (event.key) {

@@ -6,6 +6,9 @@ $bottom-color: #0000ff
 $back-color: #ffff00
 $side: 300px
 
+*
+  box-sizing: border-box
+
 body
   display: flex
   align-items: center
@@ -28,6 +31,11 @@ body
   transform-style: preserve-3d
   transition: transform .5s
 
+.face
+  transform-style: preserve-3d
+  transition: transform .3s
+  transform-origin: $side/6 $side/6
+
 .sticker
   position: absolute
   width: $side / 3
@@ -37,25 +45,27 @@ body
   align-items: center
   justify-content: center
   font-size: 24pt
-  border: 4px black solid
-  border-radius: 4px
-  transition: transform .2s
+  padding: 4px
+  background-color: black
 
-.face-front
-  background-color: $front-color
+.color-square
+  width: 100%
+  height: 100%
 
-.face-back
-  background-color: $back-color
+  .face-front &
+    background-color: $front-color
 
-.face-left
-  background-color: $left-color
+  .face-back &
+    background-color: $back-color
 
-.face-right
-  background-color: $right-color
+  .face-left &
+    background-color: $left-color
 
-.face-top
-  background-color: $top-color
+  .face-right &
+    background-color: $right-color
 
-.face-bottom
-  background-color: $bottom-color
+  .face-top &
+    background-color: $top-color
 
+  .face-bottom &
+    background-color: $bottom-color
