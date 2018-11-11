@@ -23,11 +23,6 @@ body {
   transition: transform 0.5s;
 }
 
-.face {
-  transform-style: preserve-3d;
-  transition: transform 0.5s;
-}
-
 .sticker {
   position: absolute;
   width: 100px;
@@ -43,11 +38,11 @@ body {
 }
 
 .face-front {
-  background-color: white;
+  background-color: #ffffff;
 }
 
 .face-back {
-  background-color: yellow;
+  background-color: #ffff00;
 }
 
 .face-left {
@@ -63,5 +58,5 @@ body {
 }
 
 .face-bottom {
-  background-color: blue;
+  background-color: #0000ff;
 }

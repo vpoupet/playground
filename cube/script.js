@@ -1,6 +1,7 @@
 let length = 300;
 let mouseX;
 let mouseY;
+let cube;
 
 class Sticker {
     constructor(face, shiftX, shiftY) {
@@ -114,9 +115,6 @@ class Cube {
     }
 }
 
-let c = new Cube();
-document.getElementById("scene").appendChild(c.element);
-
 function handleKey(event) {
     switch (event.key) {
         case "ArrowRight":
@@ -126,35 +124,35 @@ function handleKey(event) {
             event.preventDefault();
             let element = document.elementFromPoint(mouseX, mouseY);
             if (element.classList.contains("sticker")) {
-                let s = c.sticker(element);
+                let s = cube.sticker(element);
                 let t = s.getTranslation();
                 switch(event.key) {
                     case "ArrowRight":
                         if (Math.abs(t[1]) >= length / 2) {
-                            c.move([0, 0, 1], s.getCoordinates(), 1);
+                            cube.move([0, 0, 1], s.getCoordinates(), 1);
                         } else {
-                            c.move([0, 1, 0], s.getCoordinates(), 1);
+                            cube.move([0, 1, 0], s.getCoordinates(), 1);
                         }
                         break;
                     case "ArrowLeft":
                         if (Math.abs(t[1]) >= length / 2) {
-                            c.move([0, 0, 1], s.getCoordinates(), -1);
+                            cube.move([0, 0, 1], s.getCoordinates(), -1);
                         } else {
-                            c.move([0, 1, 0], s.getCoordinates(), -1);
+                            cube.move([0, 1, 0], s.getCoordinates(), -1);
                         }
                         break;
                     case "ArrowUp":
                         if (Math.abs(t[0]) >= length / 2) {
-                            c.move([0, 0, 1], s.getCoordinates(), -1);
+                            cube.move([0, 0, 1], s.getCoordinates(), -1);
                         } else {
-                            c.move([1, 0, 0], s.getCoordinates(), 1);
+                            cube.move([1, 0, 0], s.getCoordinates(), 1);
                         }
                         break;
                     case "ArrowDown":
                         if (Math.abs(t[0]) >= length / 2) {
-                            c.move([0, 0, 1], s.getCoordinates(), 1);
+                            cube.move([0, 0, 1], s.getCoordinates(), 1);
                         } else {
-                            c.move([1, 0, 0], s.getCoordinates(), -1);
+                            cube.move([1, 0, 0], s.getCoordinates(), -1);
                         }
                         break;
                 }
@@ -164,10 +162,57 @@ function handleKey(event) {
     }
 }
 
-function handleMouseMove(event) {
+window.addEventListener('keydown', function(event) {
+    switch (event.key) {
+        case "ArrowRight":
+        case "ArrowLeft":
+        case "ArrowUp":
+        case "ArrowDown":
+            event.preventDefault();
+            let element = document.elementFromPoint(mouseX, mouseY);
+            if (element.classList.contains("sticker")) {
+                let s = cube.sticker(element);
+                let t = s.getTranslation();
+                switch (event.key) {
+                    case "ArrowRight":
+                        if (Math.abs(t[1]) >= length / 2) {
+                            cube.move([0, 0, 1], s.getCoordinates(), 1);
+                        } else {
+                            cube.move([0, 1, 0], s.getCoordinates(), 1);
+                        }
+                        break;
+                    case "ArrowLeft":
+                        if (Math.abs(t[1]) >= length / 2) {
+                            cube.move([0, 0, 1], s.getCoordinates(), -1);
+                        } else {
+                            cube.move([0, 1, 0], s.getCoordinates(), -1);
+                        }
+                        break;
+                    case "ArrowUp":
+                        if (Math.abs(t[0]) >= length / 2) {
+                            cube.move([0, 0, 1], s.getCoordinates(), -1);
+                        } else {
+                            cube.move([1, 0, 0], s.getCoordinates(), 1);
+                        }
+                        break;
+                    case "ArrowDown":
+                        if (Math.abs(t[0]) >= length / 2) {
+                            cube.move([0, 0, 1], s.getCoordinates(), 1);
+                        } else {
+                            cube.move([1, 0, 0], s.getCoordinates(), -1);
+                        }
+                        break;
+                }
+            }
+    }
+});
+
+window.addEventListener('mousemove', function(event) {
     mouseX = event.clientX;
     mouseY = event.clientY;
-}
+});
 
-window.addEventListener('keydown', handleKey, true);
-window.addEventListener('mousemove', handleMouseMove, true);
+window.onload = function() {
+    cube = new Cube();
+    document.getElementById("scene").appendChild(cube.element);
+};
