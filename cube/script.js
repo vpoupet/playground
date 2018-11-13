@@ -152,6 +152,13 @@ class Cube {
                 this.element.appendChild(s.element);
             }
         }
+        // add logo on central sticker of front face
+        this.stickers.forEach(s => {
+            let c = s.getCoordinates();
+            if (c[0] === 0 && c[1] === 0 && c[2] === 1) {
+                s.element.classList.add("logo");
+            }
+        });
         this.isLocked = false;
     }
 
