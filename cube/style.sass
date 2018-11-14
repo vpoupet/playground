@@ -1,11 +1,3 @@
-// face colors
-$front-color: #ffffff
-$right-color: #ff833c
-$top-color: #6cff2a
-$left-color: #ab0004
-$bottom-color: #0000ff
-$back-color: #ffff00
-
 // length constants
 $side: 300px  // length of the side of the cube (should be the same value as the one in script.js)
 
@@ -28,53 +20,53 @@ body
   perspective: 3 * $side
   cursor: pointer
 
+  *
+    display: flex
+    align-items: center
+    justify-content: center
+    position: absolute
+
 .cube
   width: $side
   height: $side
-  position: relative
-  transform: rotateX(-35deg) rotateY(-45deg) translateX($side / 3) translateY($side / 5)
+  transform: rotateX(-30deg) rotateY(-40deg)
   transform-style: preserve-3d
   transition: transform .5s
 
-.rotation
-  transform-style: preserve-3d
-  transition: transform .3s
-  transform-origin: $side/6 $side/6 // fix rotation origin
+  .face-front
+    --face-color: #ffffff
 
-.sticker
-  position: absolute
-  width: $side / 3
-  height: $side / 3
-  opacity: .9
-  display: flex
-  align-items: center
-  justify-content: center
-  padding: 4px
-  background-color: black
+  .face-back
+    --face-color: #ffff00
 
-.color-square
-  width: 100%
-  height: 100%
-  border-radius: 12px
+  .face-left
+    --face-color: #ab0004
 
-  .face-front &
-    background-color: $front-color
+  .face-right
+    --face-color: #ff833c
 
-  .face-back &
-    background-color: $back-color
+  .face-top
+    --face-color: #6cff2a
 
-  .face-left &
-    background-color: $left-color
+  .face-bottom
+    --face-color: #0000ff
 
-  .face-right &
-    background-color: $right-color
+  .rotation-block
+    transform-style: preserve-3d
+    transition: transform .3s
 
-  .face-top &
-    background-color: $top-color
+  .sticker
+    width: $side / 3
+    height: $side / 3
+    opacity: .9
+    background-color: black
 
-  .face-bottom &
-    background-color: $bottom-color
+    .color-square
+      width: 90%
+      height: 90%
+      border-radius: 12px
+      background-color: var(--face-color)
 
-  .logo &
-    background-image: url(./logo.jpeg)
-    background-size: cover
+      .logo
+        background-image: url(./logo.jpeg)
+        background-size: cover

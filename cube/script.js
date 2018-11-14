@@ -2,22 +2,22 @@
  * Cube side length in px (should be an integer multiple of 6)
  * @type {number}
  */
-let length = 300;
+let side = 300;
 /**
- * X-coordinate of the mouse (tracked automatically)
+ * Coordinates of the mouse (tracked automatically)
  * @type {number}
  */
-let mouseX;
-/**
- * Y-coordinate of the mouse (tracked automatically)
- * @type {number}
- */
-let mouseY;
+let mouseLocation = [0, 0];
 /**
  * Cube instance
  * @type {Cube}
  */
 let cube;
+
+let touchSticker = null;
+let touchLocation;
+
+let axes;
 
 /**
  * Representation of a cube's sticker face
@@ -47,7 +47,7 @@ class Sticker {
         this.matrix = mat4.create();
         // move the sticker from the center of the cube to its position on the "front face" (it will be rotated to the
         // correct face later
-        mat4.translate(this.matrix, this.matrix, [shiftX * length / 3, shiftY * length / 3, length / 2]);
+        mat4.translate(this.matrix, this.matrix, [shiftX * side / 3, shiftY * side / 3, side / 2]);
         this.updateElement();
     }
 
@@ -80,29 +80,31 @@ class Sticker {
      * @returns {vec3} a triple of coordinates in {-1, 0, 1} describing the small cube on which the sticker is
      */
     getCoordinates() {
-        let t = vec3.create();
-        mat4.getTranslation(t, this.matrix);
-        for (let i = 0; i < 3; i++) {
-            if (t[i] >= length / 3) {
-                t[i] = 1;
-            } else if (t[i] <= -length / 3) {
-                t[i] = -1;
-            } else {
-                t[i] = 0;
-            }
-        }
-        return t;
+        let t = mat4.getTranslation(vec3.create(), this.matrix);
+        return vec3.round(t, vec3.scale(t, t, 1/150));
     }
 
-    /**
-     * Returns the current translation of the sticker.
-     *
-     * @returns {vec3}
-     */
-    getTranslation() {
-        let t = vec3.create();
-        mat4.getTranslation(t, this.matrix);
-        return t;
+    getFaceVector() {
+        let v = mat4.getTranslation(vec3.create(), this.matrix);
+        return vec3.round(v, vec3.scale(v, v, 1/220));
+    }
+
+    makeForce(v) {
+        let faceVector = this.getFaceVector();
+        let maxAbsProjection = 0;
+        let maxIndex = 0;
+        for (let i = 0; i < 3; i++) {
+            if (faceVector[i] === 0) {
+                let p = vec2.dot(v, axes[i]);
+                if (Math.abs(p) >= maxAbsProjection) {
+                    maxAbsProjection = Math.abs(p);
+                    maxIndex = i;
+                }
+            }
+        }
+        let forceVector = vec3.create();
+        forceVector[maxIndex] = Math.sign(vec2.dot(v, axes[maxIndex]));
+        return forceVector;
     }
 }
 
@@ -124,41 +126,42 @@ class Cube {
         this.element.classList.add("cube");
         // create all the stickers on the cube (9 for each face)
         this.stickers = [];
-        for (let i = 0; i < 3; i++) {
-            for (let j = 0; j < 3; j++) {
+        for (let i = -1; i <= 1; i++) {
+            for (let j = -1; j <= 1; j++) {
                 let s;
-                s = new Sticker("face-front", i - 1, j - 1);
+                s = new Sticker("face-front", i, j);
                 this.stickers.push(s);
                 this.element.appendChild(s.element);
-                s = new Sticker("face-back", i - 1, j - 1);
+                s = new Sticker("face-back", i, j);
                 this.stickers.push(s);
                 s.rotate(Math.PI, [0, 1, 0]);
                 this.element.appendChild(s.element);
-                s = new Sticker("face-right", i - 1, j - 1);
+                s = new Sticker("face-right", i, j);
                 this.stickers.push(s);
                 s.rotate(Math.PI / 2, [0, 1, 0]);
                 this.element.appendChild(s.element);
-                s = new Sticker("face-left", i - 1, j - 1);
+                s = new Sticker("face-left", i, j);
                 this.stickers.push(s);
                 s.rotate(-Math.PI / 2, [0, 1, 0]);
                 this.element.appendChild(s.element);
-                s = new Sticker("face-top", i - 1, j - 1);
+                s = new Sticker("face-top", i, j);
                 this.stickers.push(s);
                 s.rotate(Math.PI / 2, [1, 0, 0]);
                 this.element.appendChild(s.element);
-                s = new Sticker("face-bottom", i - 1, j - 1);
+                s = new Sticker("face-bottom", i, j);
                 this.stickers.push(s);
                 s.rotate(-Math.PI / 2, [1, 0, 0]);
                 this.element.appendChild(s.element);
             }
         }
         // add logo on central sticker of front face
-        this.stickers.forEach(s => {
+        for (let s of this.stickers) {
             let c = s.getCoordinates();
             if (c[0] === 0 && c[1] === 0 && c[2] === 1) {
-                s.element.classList.add("logo");
+                s.element.getElementsByClassName("color-square")[0].classList.add("logo");
+                break;
             }
-        });
+        }
         this.isLocked = false;
     }
 
@@ -173,9 +176,9 @@ class Cube {
         element = element.closest('.sticker');
         if (element) {
             // find the Sticker corresponding to the located element
-            for (let i = 0; i < this.stickers.length; i++) {
-                if (this.stickers[i].element === element) {
-                    return this.stickers[i];
+            for (let s of this.stickers) {
+                if (s.element === element) {
+                    return s;
                 }
             }
         }
@@ -184,6 +187,7 @@ class Cube {
 
     /**
      * Rotate a slice of the cube
+     * TODO: rewrite doc
      *
      * @param axis {number[]} triple describing the axis of rotation (should be in {-1, 0, 1}^3 with only one
      * non-zero value)
@@ -191,15 +195,13 @@ class Cube {
      * defines the slice that will be rotated
      * @param direction {number} direction of the rotation (1 or -1)
      */
-    move(axis, coordinates, direction) {
-        // do nothing if cube is already performing a rotation
+    moveSticker(sticker, direction) {
         if (this.isLocked) { return; }
-
-        // lock the cube until end of rotation
         this.isLocked = true;
 
-        // extract the coordinate that corresponds to the rotation axis
-        vec3.multiply(coordinates, coordinates, axis);
+        let forceVector = sticker.makeForce(direction);
+        let faceVector = sticker.getFaceVector();
+        let rotationAxis = vec3.cross(vec3.create(), faceVector, forceVector);
 
         // To avoid graphical glitches that appear if the stickers are rotated individually, they are grouped in a
         // single element, rotate the element as a whole in an animation, then extract the stickers and rotate them to
@@ -207,13 +209,13 @@ class Cube {
         let face = [];  // list of stickers to rotate
         let rotationElement = document.createElement("div");    // div containing the sticker elements
         this.element.appendChild(rotationElement);
-        rotationElement.classList.add("rotation");
+        rotationElement.classList.add("rotation-block");
 
         // add all stickers that should be rotated
-        for (let i = 0; i < this.stickers.length; i++) {
-            let s = this.stickers[i];
+        let coordinates = vec3.multiply(vec3.create(), sticker.getCoordinates(), rotationAxis);
+        for (let s of this.stickers) {
             let t = s.getCoordinates();
-            vec3.multiply(t, t, axis);
+            vec3.multiply(t, t, rotationAxis);
             if (vec3.equals(coordinates, t)) {
                 face.push(s);
                 rotationElement.appendChild(s.element);
@@ -223,9 +225,9 @@ class Cube {
         // callback when rotation animation finishes (all stickers are removed from the face, and rotated to their
         // final position (not animated)
         rotationElement.addEventListener('transitionend', function() {
-            for (let i = 0; i < face.length; i++) {
-                this.element.appendChild(face[i].element);
-                face[i].rotate(direction * Math.PI/2, axis);
+            for (let s of face) {
+                this.element.appendChild(s.element);
+                s.rotate(Math.PI/2, rotationAxis);
             }
             rotationElement.remove();
             this.isLocked = false;  // unlock the cube after the rotation animation
@@ -233,7 +235,7 @@ class Cube {
 
         // the rotation is called asynchronously otherwise it isn't animated
         setTimeout(function() {
-            rotationElement.style.transform = `rotate3d(${axis[0]}, ${axis[1]}, ${axis[2]}, ${90 * direction}deg)`;
+            rotationElement.style.transform = `rotate3d(${rotationAxis},90deg)`;
         }, 0);
     }
 
@@ -255,8 +257,7 @@ class Cube {
         vec3.multiply(coordinates, coordinates, axis);
 
         // add all stickers that should be rotated
-        for (let i = 0; i < this.stickers.length; i++) {
-            let s = this.stickers[i];
+        for (let s of this.stickers) {
             let t = s.getCoordinates();
             vec3.multiply(t, t, axis);
             if (vec3.equals(coordinates, t)) {
@@ -283,19 +284,19 @@ class Cube {
         // their final position instantly.
         let rotationElement = document.createElement("div");    // div containing the sticker elements
         this.element.appendChild(rotationElement);
-        rotationElement.classList.add("rotation");
+        rotationElement.classList.add("rotation-block");
 
         // add all stickers
-        for (let i = 0; i < this.stickers.length; i++) {
-            rotationElement.appendChild(this.stickers[i].element);
+        for (let s of this.stickers) {
+            rotationElement.appendChild(s.element);
         }
 
         // callback when rotation animation finishes (all stickers are removed from the face, and rotated to their
         // final position (not animated)
         rotationElement.addEventListener('transitionend', function() {
-            for (let i = 0; i < this.stickers.length; i++) {
-                this.element.appendChild(this.stickers[i].element);
-                this.stickers[i].rotate(direction * Math.PI/2, axis);
+            for (let s of this.stickers) {
+                this.element.appendChild(s.element);
+                s.rotate(direction * Math.PI/2, axis);
             }
             rotationElement.remove();
             this.isLocked = false;  // unlock the cube after the rotation animation
@@ -324,73 +325,72 @@ class Cube {
             this.fastMove(axis, coordinates, 2 * rotationDirection - 1, false);
         }
     }
+
+    getAxes() {
+        let refPoint = document.createElement("div");
+        let baseTranslation = `translateX(${side / 2}px) translateY(-${side / 2}px) translateZ(${side / 2}px)`;
+        this.element.appendChild(refPoint);
+        refPoint.style.transform = baseTranslation;
+        let bounds = refPoint.getBoundingClientRect();
+        let p0 = vec2.fromValues(bounds.x, bounds.y);
+        let axes = [];
+        let v;
+
+        // get X axis
+        refPoint.style.transform = "rotateY(-90deg) " + baseTranslation;
+        bounds = refPoint.getBoundingClientRect();
+        v = vec2.sub(vec2.create(), p0, [bounds.x, bounds.y]);
+        vec2.normalize(v, v);
+        axes.push(v);
+
+        // get Y axis
+        refPoint.style.transform = "rotateX(-90deg) " + baseTranslation;
+        bounds = refPoint.getBoundingClientRect();
+        v = vec2.sub(vec2.create(), [bounds.x, bounds.y], p0);
+        vec2.normalize(v, v);
+        axes.push(v);
+
+        // get Z axis
+        refPoint.style.transform = "rotateY(90deg) " + baseTranslation;
+        bounds = refPoint.getBoundingClientRect();
+        v = vec2.sub(vec2.create(), p0, [bounds.x, bounds.y]);
+        vec2.normalize(v, v);
+        axes.push(v);
+
+        refPoint.remove();
+        return axes;
+    }
 }
 
 
 window.addEventListener('keydown', function(event) {
-    // react to direction key presses
-    switch (event.key) {
-        case "ArrowRight":
-        case "ArrowLeft":
-        case "ArrowUp":
-        case "ArrowDown":
-        case "z":
-        case "q":
-        case "s":
-        case "d":
-        case "Z":
-        case "Q":
-        case "S":
-        case "D":
+    let element = document.elementFromPoint(...mouseLocation);
+    let sticker = cube.getSticker(element);
+    let direction;
+    if (sticker) {
+        // react to direction key presses
+        switch (event.key) {
+            case "ArrowRight":
+            case "d":
+                direction = [1, 0];
+                break;
+            case "ArrowLeft":
+            case "q":
+                direction = [-1, 0];
+                break;
+            case "ArrowUp":
+            case "z":
+                direction = [0, -1];
+                break;
+            case "ArrowDown":
+            case "s":
+                direction = [0, 1];
+                break;
+        }
+        if (direction) {
             event.preventDefault();
-            let element = document.elementFromPoint(mouseX, mouseY);
-            let sticker = cube.getSticker(element);
-            if (sticker) {
-                let t = sticker.getTranslation();
-                let axis;
-                let direction;
-                switch (event.key) {
-                    case "ArrowRight":
-                    case "d":
-                    case "D":
-                        axis = (Math.abs(t[1]) >= length / 2) ? [0, 0, 1] : [0, 1, 0];
-                        direction = 1;
-                        break;
-                    case "ArrowLeft":
-                    case "q":
-                    case "Q":
-                        axis = (Math.abs(t[1]) >= length / 2) ? [0, 0, 1] : [0, 1, 0];
-                        direction = -1;
-                        break;
-                    case "ArrowUp":
-                    case "z":
-                    case "Z":
-                        if (Math.abs(t[0]) >= length / 2) {
-                            axis = [0, 0, 1];
-                            direction = -1;
-                        } else {
-                            axis = [1, 0, 0];
-                            direction = 1;
-                        }
-                        break;
-                    case "ArrowDown":
-                    case "s":
-                    case "S":
-                        if (Math.abs(t[0]) >= length / 2) {
-                            axis = [0, 0, 1];
-                            direction = 1;
-                        } else {
-                            axis = [1, 0, 0];
-                            direction = -1;
-                        }
-                        break;
-                }
-                if (event.shiftKey) {
-                    cube.rotate(axis, direction);
-                } else {
-                    cube.move(axis, sticker.getCoordinates(), direction);
-                }
-            }
+            cube.moveSticker(sticker, direction);
+        }
     }
 });
 
@@ -398,12 +398,42 @@ window.onload = function() {
     // create cube and display it on screen
     cube = new Cube();
     document.getElementById("scene").appendChild(cube.element);
+    axes = cube.getAxes();
 };
 
 window.addEventListener("mousemove", handleMouseMove);
+window.addEventListener("touchstart", handleTouchStart);
+window.addEventListener("touchmove", handleTouchMove);
+window.addEventListener("touchend", endTouch);
+window.addEventListener("touchstop", endTouch);
 
 function handleMouseMove(event) {
     // track position of cursor
-    mouseX = event.clientX;
-    mouseY = event.clientY;
+    mouseLocation = [event.clientX, event.clientY];
 }
+
+function handleTouchStart(event) {
+    let touch = event.touches[0];
+    touchLocation = [touch.clientX, touch.clientY];
+    touchSticker = cube.getSticker(document.elementFromPoint(touch.clientX, touch.clientY));
+}
+
+function handleTouchMove(event) {
+    event.preventDefault();
+    if (touchLocation === undefined) { return; }
+
+    // get first touch vector
+    let touch = event.touches[0];
+    let t = vec2.sub(vec2.create(), [touch.clientX, touch.clientY], touchLocation);
+    if (vec2.length(t) >= side / 2) {
+        if (touchSticker) {
+            cube.moveSticker(touchSticker, t);
+        }
+        endTouch();  // stop monitoring touch
+    }
+}
+
+function endTouch() {
+    touchLocation = undefined;
+}
+
