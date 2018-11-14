@@ -2,7 +2,7 @@
  * Cube side length in px (should be an integer multiple of 6)
  * @type {number}
  */
-let side = 300;
+const side = 300;
 /**
  * Coordinates of the mouse (tracked automatically)
  * @type {number}
@@ -13,10 +13,15 @@ let mouseLocation = [0, 0];
  * @type {Cube}
  */
 let cube;
-
-let touchSticker = null;
-let touchLocation;
-
+/**
+ * Currently tracked touch (started inside the cube)
+ * @type {{id: string, location: number[], sticker: Sticker}}
+ */
+let currentTouch;
+/**
+ * 2D screen vectors corresponding to the positive 3D axes of the cube
+ * @type {number[][]}
+ */
 let axes;
 
 /**
@@ -40,7 +45,7 @@ class Sticker {
         this.element = document.createElement("div");
         this.element.classList.add("sticker");
         this.element.classList.add(face);
-        let coloredSquare = document.createElement("div");
+        const coloredSquare = document.createElement("div");
         coloredSquare.classList.add("color-square");
         this.element.appendChild(coloredSquare);
         // the matrix represents the transformation of the sticker (rotation and translation)
@@ -58,7 +63,7 @@ class Sticker {
      * @param axis {number[]} triple describing the rotation axis
      */
     rotate(angle, axis) {
-        let rotation = mat4.fromRotation(mat4.create(), angle, axis);
+        const rotation = mat4.fromRotation(mat4.create(), angle, axis);
         mat4.multiply(this.matrix, rotation, this.matrix);
         // because the regular rotations are all multiples of PI/2 around the main axes, coordinates should
         // always be integers and are rounded to maintain precision
@@ -84,18 +89,31 @@ class Sticker {
         return vec3.round(t, vec3.scale(t, t, 1/150));
     }
 
+    /**
+     * Returns the normal vector of the Sticker
+     *
+     * @returns {vec3} a triple corresponding to the coordinates of the normal vector of the sticker
+     */
     getFaceVector() {
         let v = mat4.getTranslation(vec3.create(), this.matrix);
         return vec3.round(v, vec3.scale(v, v, 1/220));
     }
 
+    /**
+     * Returns the 3D axis orthogonal to the sticker's normal vector that most closely macthes the 2D given vector
+     * (the 2D vector is a direction on the screen, and it is matched to the apparent directions of the 3D axes of
+     * the cube)
+     *
+     * @param v {vec2} the 2D screen vector to convert into a 3D axis
+     * @returns {vec3} a 3D axis (triple of values with exactly one non-zero value
+     */
     makeForce(v) {
-        let faceVector = this.getFaceVector();
+        const faceVector = this.getFaceVector();
         let maxAbsProjection = 0;
         let maxIndex = 0;
         for (let i = 0; i < 3; i++) {
             if (faceVector[i] === 0) {
-                let p = vec2.dot(v, axes[i]);
+                const p = vec2.dot(v, axes[i]);
                 if (Math.abs(p) >= maxAbsProjection) {
                     maxAbsProjection = Math.abs(p);
                     maxIndex = i;
@@ -156,7 +174,7 @@ class Cube {
         }
         // add logo on central sticker of front face
         for (let s of this.stickers) {
-            let c = s.getCoordinates();
+            const c = s.getCoordinates();
             if (c[0] === 0 && c[1] === 0 && c[2] === 1) {
                 s.element.getElementsByClassName("color-square")[0].classList.add("logo");
                 break;
@@ -187,32 +205,32 @@ class Cube {
 
     /**
      * Rotate a slice of the cube
-     * TODO: rewrite doc
      *
-     * @param axis {number[]} triple describing the axis of rotation (should be in {-1, 0, 1}^3 with only one
-     * non-zero value)
-     * @param coordinates {number[]} triple of coordinates of a small cube (in {-1, 0, 1}^3). The designated cube
-     * defines the slice that will be rotated
-     * @param direction {number} direction of the rotation (1 or -1)
+     * The slice and rotation are determined from a sticker and a 2D vector. The sticker will be rotated in the
+     * 3D axis that most closely matches the given 2D direction (each sticker can be rotated along the two axes that
+     * are orthogonal to its face normal direction).
+     *
+     * @param sticker {Sticker} a Sticker of the slice that is being rotated
+     * @param direction {number[]} 2D direction in which the sticker is being rotated
      */
     moveSticker(sticker, direction) {
         if (this.isLocked) { return; }
         this.isLocked = true;
 
-        let forceVector = sticker.makeForce(direction);
-        let faceVector = sticker.getFaceVector();
-        let rotationAxis = vec3.cross(vec3.create(), faceVector, forceVector);
+        const forceVector = sticker.makeForce(direction);
+        const faceVector = sticker.getFaceVector();
+        const rotationAxis = vec3.cross(vec3.create(), faceVector, forceVector);
 
         // To avoid graphical glitches that appear if the stickers are rotated individually, they are grouped in a
         // single element, rotate the element as a whole in an animation, then extract the stickers and rotate them to
         // their final position instantly.
-        let face = [];  // list of stickers to rotate
-        let rotationElement = document.createElement("div");    // div containing the sticker elements
+        const face = [];  // list of stickers to rotate
+        const rotationElement = document.createElement("div");    // div containing the sticker elements
         this.element.appendChild(rotationElement);
         rotationElement.classList.add("rotation-block");
 
         // add all stickers that should be rotated
-        let coordinates = vec3.multiply(vec3.create(), sticker.getCoordinates(), rotationAxis);
+        const coordinates = vec3.multiply(vec3.create(), sticker.getCoordinates(), rotationAxis);
         for (let s of this.stickers) {
             let t = s.getCoordinates();
             vec3.multiply(t, t, rotationAxis);
@@ -240,49 +258,27 @@ class Cube {
     }
 
     /**
-     * Rotate a slice of the cube. This function is similar to the `move` function, but it rotates the Stickers
-     * directly so there is no animation (and no need to group the stickers as a face)
-     *
-     * @param axis {number[]} triple describing the axis of rotation (should be in {-1, 0, 1}^3 with only one
-     * non-zero value)
-     * @param coordinates {number[]} triple of coordinates of a small cube (in {-1, 0, 1}^3). The designated cube
-     * defines the slice that will be rotated
-     * @param direction {number} direction of the rotation (1 or -1)
-     */
-    fastMove(axis, coordinates, direction) {
-        // do nothing if cube is already performing a rotation
-        if (this.isLocked) { return; }
-
-        // extract the coordinate that corresponds to the rotation axis
-        vec3.multiply(coordinates, coordinates, axis);
-
-        // add all stickers that should be rotated
-        for (let s of this.stickers) {
-            let t = s.getCoordinates();
-            vec3.multiply(t, t, axis);
-            if (vec3.equals(coordinates, t)) {
-                s.rotate(direction * Math.PI/2, axis);
-            }
-        }
-    }
-
-    /**
      * Rotate the whole cube.
      *
-     * @param axis {number[]} triple of coordinates to describe the axis of the rotation
-     * @param direction {number} value indicating the direction of the rotation (1 or -1)
+     * The rotation is determined from a sticker and a 2D vector. The sticker will be rotated in the
+     * 3D axis that most closely matches the given 2D direction (each sticker can be rotated along the two axes that
+     * are orthogonal to its face normal direction).
+     *
+     * @param sticker {Sticker} a Sticker of the cube
+     * @param direction {number[]} 2D direction in which the sticker is being rotated
      */
-    rotate(axis, direction) {
-        // do nothing if cube is already performing a rotation
+    moveCube(sticker, direction) {
         if (this.isLocked) { return; }
-
-        // lock the cube until end of rotation
         this.isLocked = true;
+
+        const forceVector = sticker.makeForce(direction);
+        const faceVector = sticker.getFaceVector();
+        const rotationAxis = vec3.cross(vec3.create(), faceVector, forceVector);
 
         // To avoid graphical glitches that appear if the stickers are rotated individually, they are grouped in a
         // single element, rotate the element as a whole in an animation, then extract the stickers and rotate them to
         // their final position instantly.
-        let rotationElement = document.createElement("div");    // div containing the sticker elements
+        const rotationElement = document.createElement("div");    // div containing the sticker elements
         this.element.appendChild(rotationElement);
         rotationElement.classList.add("rotation-block");
 
@@ -296,7 +292,7 @@ class Cube {
         rotationElement.addEventListener('transitionend', function() {
             for (let s of this.stickers) {
                 this.element.appendChild(s.element);
-                s.rotate(direction * Math.PI/2, axis);
+                s.rotate(Math.PI/2, rotationAxis);
             }
             rotationElement.remove();
             this.isLocked = false;  // unlock the cube after the rotation animation
@@ -304,8 +300,33 @@ class Cube {
 
         // the rotation is called asynchronously otherwise it isn't animated
         setTimeout(function() {
-            rotationElement.style.transform = `rotate3d(${axis[0]}, ${axis[1]}, ${axis[2]}, ${90 * direction}deg)`;
+            rotationElement.style.transform = `rotate3d(${rotationAxis},90deg)`;
         }, 0);
+    }
+
+    /**
+     * Rotate a slice of the cube instantly (not animated)
+     *
+     * @param axis {number[]} triple describing the axis of rotation (should be in {-1, 0, 1}^3 with exactly one
+     * non-zero value)
+     * @param coordinates {number[]} triple of coordinates of a small cube (in {-1, 0, 1}^3). The designated cube
+     * defines the slice that will be rotated
+     */
+    fastMove(axis, coordinates) {
+        // do nothing if cube is already performing a rotation
+        if (this.isLocked) { return; }
+
+        // extract the coordinate that corresponds to the rotation axis
+        vec3.multiply(coordinates, coordinates, axis);
+
+        // add all stickers that should be rotated
+        for (let s of this.stickers) {
+            let t = s.getCoordinates();
+            vec3.multiply(t, t, axis);
+            if (vec3.equals(coordinates, t)) {
+                s.rotate(Math.PI/2, axis);
+            }
+        }
     }
 
     /**
@@ -315,25 +336,32 @@ class Cube {
      */
     shuffle(n) {
         for (let i = 0; i < n; i++) {
-            let axisIndex = Math.floor(Math.random() * 3);
-            let axisDirection = Math.floor(Math.random() * 2);
-            let rotationDirection = Math.floor(Math.random() * 2);
+            const axisIndex = Math.floor(Math.random() * 3);
             let axis = [0, 0, 0];
-            axis[axisIndex] = 1;
+            axis[axisIndex] = 2 * Math.floor(Math.random() * 2) - 1;
             let coordinates = [0, 0, 0];
-            coordinates[axisIndex] = 2 * axisDirection - 1;
-            this.fastMove(axis, coordinates, 2 * rotationDirection - 1, false);
+            coordinates[axisIndex] = Math.floor(Math.random() * 3) - 1;
+            this.fastMove(axis, coordinates);
         }
     }
 
+    /**
+     * Returns the 2D vectors corresponding to the directions of the main 3D axes of the cube on screen
+     *
+     * @returns {number[][]} An array of 3 2D unit vectors (arrays of 2 numbers) representing the direction on the
+     * screen 2D plane that corresponds to the positive X, Y and Z 3D cube axes.
+     *
+     * To determine the vectors, the function creates a point-element (0-width and 0-height div), moves it to
+     * different corners of the cube (in 3D) and queries the screen coordinates of the resulting 2D point.
+     */
     getAxes() {
-        let refPoint = document.createElement("div");
-        let baseTranslation = `translateX(${side / 2}px) translateY(-${side / 2}px) translateZ(${side / 2}px)`;
+        const refPoint = document.createElement("div");
+        const baseTranslation = `translateX(${side / 2}px) translateY(-${side / 2}px) translateZ(${side / 2}px)`;
         this.element.appendChild(refPoint);
         refPoint.style.transform = baseTranslation;
         let bounds = refPoint.getBoundingClientRect();
-        let p0 = vec2.fromValues(bounds.x, bounds.y);
-        let axes = [];
+        const p0 = vec2.fromValues(bounds.x, bounds.y);
+        const axes = [];
         let v;
 
         // get X axis
@@ -364,32 +392,40 @@ class Cube {
 
 
 window.addEventListener('keydown', function(event) {
-    let element = document.elementFromPoint(...mouseLocation);
-    let sticker = cube.getSticker(element);
+    const element = document.elementFromPoint(...mouseLocation);
+    const sticker = cube.getSticker(element);
     let direction;
     if (sticker) {
         // react to direction key presses
         switch (event.key) {
             case "ArrowRight":
             case "d":
+            case "D":
                 direction = [1, 0];
                 break;
             case "ArrowLeft":
             case "q":
+            case "Q":
                 direction = [-1, 0];
                 break;
             case "ArrowUp":
             case "z":
+            case "Z":
                 direction = [0, -1];
                 break;
             case "ArrowDown":
             case "s":
+            case "S":
                 direction = [0, 1];
                 break;
         }
         if (direction) {
             event.preventDefault();
-            cube.moveSticker(sticker, direction);
+            if (event.shiftKey) {
+                cube.moveCube(sticker, direction);
+            } else {
+                cube.moveSticker(sticker, direction);
+            }
         }
     }
 });
@@ -403,7 +439,7 @@ window.onload = function() {
 
 window.addEventListener("mousemove", handleMouseMove);
 window.addEventListener("touchstart", handleTouchStart);
-window.addEventListener("touchmove", handleTouchMove);
+window.addEventListener("touchmove", handleTouchMove, {passive: false});
 window.addEventListener("touchend", endTouch);
 window.addEventListener("touchstop", endTouch);
 
@@ -413,27 +449,48 @@ function handleMouseMove(event) {
 }
 
 function handleTouchStart(event) {
-    let touch = event.touches[0];
-    touchLocation = [touch.clientX, touch.clientY];
-    touchSticker = cube.getSticker(document.elementFromPoint(touch.clientX, touch.clientY));
-}
-
-function handleTouchMove(event) {
-    event.preventDefault();
-    if (touchLocation === undefined) { return; }
-
-    // get first touch vector
-    let touch = event.touches[0];
-    let t = vec2.sub(vec2.create(), [touch.clientX, touch.clientY], touchLocation);
-    if (vec2.length(t) >= side / 2) {
-        if (touchSticker) {
-            cube.moveSticker(touchSticker, t);
+    if (!currentTouch) {
+        const touch = event.touches[0];
+        const sticker = cube.getSticker(document.elementFromPoint(touch.clientX, touch.clientY));
+        if (sticker) {
+            currentTouch = {
+                id: touch.identifier,
+                sticker: sticker,
+                location: [touch.clientX, touch.clientY],
+            };
         }
-        endTouch();  // stop monitoring touch
     }
 }
 
-function endTouch() {
-    touchLocation = undefined;
+function handleTouchMove(event) {
+    if (currentTouch) {
+        event.preventDefault();
+        for (let touch of event.touches) {
+            if (touch.identifier === currentTouch.id) {
+                // found the tracked touch element
+                const t = vec2.sub(vec2.create(), [touch.clientX, touch.clientY], currentTouch.location);
+                if (vec2.length(t) >= side / 3) {
+                    if (event.touches.length === 1) {
+                        cube.moveSticker(currentTouch.sticker, t);
+                    } else {
+                        cube.moveCube(currentTouch.sticker, t);
+                    }
+                    currentTouch = undefined;
+                }
+                break;
+            }
+        }
+    }
+}
+
+function endTouch(event) {
+    if (currentTouch) {
+        for (let touch of event.touches) {
+            if (touch.identifier === currentTouch.id) {
+                return;
+            }
+        }
+        currentTouch = undefined;
+    }
 }
 

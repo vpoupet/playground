@@ -31,7 +31,7 @@ body {
   height: 300px;
   transform: rotateX(-30deg) rotateY(-40deg);
   transform-style: preserve-3d;
-  transition: transform 0.5s;
+  transition: transform 0.3s;
 }
 .cube .face-front {
   --face-color: #ffffff;
@@ -53,7 +53,7 @@ body {
 }
 .cube .rotation-block {
   transform-style: preserve-3d;
-  transition: transform 0.3s;
+  transition: transform 0.2s;
 }
 .cube .sticker {
   width: 100px;
@@ -67,7 +67,7 @@ body {
   border-radius: 12px;
   background-color: var(--face-color);
 }
-.cube .sticker .color-square .logo {
+.cube .sticker .logo {
   background-image: url(./logo.jpeg);
   background-size: cover;
 }
