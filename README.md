@@ -4,6 +4,11 @@ This projects is a collection of small experimentations with web technologies (m
 
 **Click on the title of each section to access the corresponding page (hosted on github.io).**
 
+## [SVG](https://vpoupet.github.io/playground/svg/index.html)
+
+Generation of SVG code with JS, including support for 3D transformations (not in the SVG standard) by computing the 
+resulting 2D transformation on relevant nodes of the SVG tree.
+
 ## [Rubik's Cube](https://vpoupet.github.io/playground/cube/index.html)
 
 3D functional representation of the 3x3x3 Rubik's cube using CSS 3D transformations.
