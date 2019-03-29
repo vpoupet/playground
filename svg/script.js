@@ -1,21 +1,45 @@
-let img;
 let tetrahedron;
-let container;
-let angle = 0;
 
-function update() {
-    angle += 1;
-    tetrahedron.style.transform = [new RotateX(angle), new RotateY(2*angle)];
-    img.propagate_transform3d();
-    container.innerHTML = img.svg();
-    window.requestAnimationFrame(update);
+class Tetrahedron {
+    constructor(scale) {
+        let p0 = vec3.fromValues(scale, 0, -scale / Math.sqrt(2));
+        let p1 = vec3.fromValues(-scale, 0, -scale / Math.sqrt(2));
+        let p2 = vec3.fromValues(0, scale, scale / Math.sqrt(2));
+        let p3 = vec3.fromValues(0, -scale, scale / Math.sqrt(2));
+
+        this.img = new SVGNode(new SVG(4 * scale, 4 * scale), new Style({
+            'stroke-width': 5,
+            'stroke': 'black',
+            'fill-opacity': .5,
+            'stroke-linejoin': 'round',
+            'fill': 'lightgreen',
+        }));
+        let ref = new SVGNode(new Group(), new Style().translate(2 * scale, 2 * scale));
+        this.img.add(ref);
+        this.rotation_group = new SVGNode(new Group());
+        ref.add(this.rotation_group);
+
+        this.rotation_group.add(new Polyline3D([p0, p1, p2], true));
+        this.rotation_group.add(new Polyline3D([p0, p1, p3], true));
+        this.rotation_group.add(new Polyline3D([p0, p2, p3], true));
+        this.rotation_group.add(new Polyline3D([p1, p2, p3], true));
+
+        this.angle = 0;
+    }
+
+    update() {
+        this.angle += 1;
+        this.rotation_group.transform = [new RotateX(this.angle), new RotateY(2 * this.angle)];
+        this.img.propagate_transform3d();
+        document.getElementById("svg-container").innerHTML = this.img.svg();
+        window.requestAnimationFrame(tetrahedron.update.bind(tetrahedron));
+    }
 }
 
+
 window.onload = () => {
-    container = document.getElementById("svg-container");
-    img = make_tetrahedron();
-    tetrahedron = img.get_by_name("tetrahedron");
-    update();
+    tetrahedron = new Tetrahedron(100);
+    tetrahedron.update();
 };
 
 function make_circles() {
@@ -149,31 +173,5 @@ function make_rubiks_cube() {
 }
 
 function make_tetrahedron() {
-    let scale = 100;
-    let p0 = vec3.fromValues(scale, 0, -scale / Math.sqrt(2));
-    let p1 = vec3.fromValues(-scale, 0, -scale / Math.sqrt(2));
-    let p2 = vec3.fromValues(0, scale, scale / Math.sqrt(2));
-    let p3 = vec3.fromValues(0, -scale, scale / Math.sqrt(2));
-
-    let img = new SVGNode(new SVG(4 * scale, 4 * scale), new Style({
-        'stroke-width': 5,
-        'stroke': 'black',
-        'fill-opacity': .5,
-        'stroke-linejoin': 'round',
-        'fill': 'lightgreen',
-    }));
-    let ref = new SVGNode(new Group(), new Style().translate(2 * scale, 2 * scale));
-    img.add(ref);
-
-    let tetrahedon = new SVGNode(new Group(), new Style().rotate_x(15).rotate_y(25));
-    tetrahedon.set_name("tetrahedron");
-    ref.add(tetrahedon);
-
-    tetrahedon.add(new Polyline3D([p0, p1, p2], true));
-    tetrahedon.add(new Polyline3D([p0, p1, p3], true));
-    tetrahedon.add(new Polyline3D([p0, p2, p3], true));
-    tetrahedon.add(new Polyline3D([p1, p2, p3], true));
-
-    img.propagate_transform3d();
     return img;
 }
