@@ -3,9 +3,10 @@ function radians(angle) {
 }
 
 class Style {
-    constructor(attributes={}, transform=[]) {
+    constructor(attributes={}, data={}) {
         this.attributes = attributes;
-        this.transform = transform;
+        this.data = data;
+        this.transform = [];
         this.parent_transform = undefined;
         this.show_transform = true;
     }
@@ -29,6 +30,7 @@ class Style {
         let new_style = new Style();
         new_style.transform = [...this.transform];
         Object.assign(new_style.attributes, this.attributes);
+        Object.assign(new_style.data, this.data);
         return new_style;
     }
 
@@ -142,7 +144,7 @@ class Tag {
         this.name = name;
     }
 
-    parameters_string() {
+    parameters_string(data) {
         return "";
     }
 }
@@ -154,7 +156,7 @@ class SVG extends Tag {
         this.height = height;
     }
 
-    parameters_string() {
+    parameters_string(data) {
         return `width="${this.width}" height="${this.height}"`;
     }
 }
@@ -176,7 +178,7 @@ class Rectangle extends Tag {
         this.ry = ry;
     }
 
-    parameters_string() {
+    parameters_string(data) {
         let r = `x="${this.x}" y="${this.y}" width="${this.width}" height="${this.height}"`;
         if (this.rx !== 0 || this.ry !== 0) {
             return r + ` rx="${this.rx}" ry="${this.ry}"`;
@@ -194,7 +196,7 @@ class Circle extends Tag {
         this.r = r;
     }
 
-    parameters_string() {
+    parameters_string(data) {
         return `cx="${this.cx}" cy="${this.cy}" r="${this.r}"`;
     }
 }
@@ -209,7 +211,7 @@ class Polyline extends Tag {
         this.points = points;
     }
 
-    parameters_string() {
+    parameters_string(data) {
         return `points="${this.points.map(p => `${p[0]},${p[1]}`).join(' ')}"`;
     }
 }
@@ -232,7 +234,7 @@ class Polyline3D extends Tag3D {
         this.points = points;
     }
 
-    parameters_string() {
+    parameters_string(data) {
         let points;
         if (this.parent_transform !== undefined) {
             points = this.points.map(p => this.parent_transform.apply_to(p));
@@ -248,6 +250,7 @@ class SVGNode {
         this.tag = tag;
         this.style = style;
         this.content = content;
+        this.data = {};
     }
 
     set_name(name) {
@@ -268,7 +271,7 @@ class SVGNode {
 
     svg() {
         let inner_str = this.tag.name;
-        let parameters_str = this.tag.parameters_string();
+        let parameters_str = this.tag.parameters_string(this.data);
         if (parameters_str.length > 0) { inner_str += " " + parameters_str; }
         let style_str = this.style.svg();
         if (style_str.length > 0) { inner_str += " " + style_str; }
@@ -316,6 +319,15 @@ class SVGNode {
             for (let n of this.content) {
                 n.propagate_transform3d();
             }
+        }
+    }
+
+    propagate_data() {
+        Object.assign(this.data, this.style.data);
+        for (let n of this.content) {
+            n.data = {};
+            Object.assign(n.data, this.data);
+            n.propagate_data();
         }
     }
 }
@@ -447,7 +459,7 @@ class Transform3D extends Transform {
         let v = vec3.fromValues(...point);
         return vec3.transformMat4(v, v, this.as_mat4());
     }
-    
+
     svg() {
         let m = this.as_mat4();
         return new Matrix(m[0], m[1], m[4], m[5], m[12], m[13]).svg();

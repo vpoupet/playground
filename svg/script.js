@@ -27,52 +27,43 @@ class NormalPolyline3D extends Polyline3D {
     }
 }
 
-class Tetrahedron {
-    constructor(container) {
-        this.container = container;
-
-        let scale = 100;
-        let p0 = vec3.fromValues(scale, 0, -scale / Math.sqrt(2));
-        let p1 = vec3.fromValues(-scale, 0, -scale / Math.sqrt(2));
-        let p2 = vec3.fromValues(0, scale, scale / Math.sqrt(2));
-        let p3 = vec3.fromValues(0, -scale, scale / Math.sqrt(2));
-
-        this.img = new SVGNode(new SVG(4 * scale, 4 * scale), new Style({
-            'stroke-width': 5,
-            'stroke': 'black',
-            'fill-opacity': .5,
-            'stroke-linejoin': 'round',
-            'fill': 'lightgreen',
-        }));
-        let ref = new SVGNode(new Group(), new Style().translate(2 * scale, 2 * scale));
-        this.img.add(ref);
-        this.rotation_group = new SVGNode(new Group());
-        ref.add(this.rotation_group);
-
-        this.rotation_group.add(new Polyline3D([p0, p1, p2], true));
-        this.rotation_group.add(new Polyline3D([p0, p1, p3], true));
-        this.rotation_group.add(new Polyline3D([p0, p2, p3], true));
-        this.rotation_group.add(new Polyline3D([p1, p2, p3], true));
-
-        this.angle = 0;
+class ParametrizedHexagonalFace extends NormalPolyline3D {
+    constructor(vertices, normal) {
+        super([], true, normal);
+        this.vertices = vertices;
     }
 
-    update() {
-        this.angle += 1;
-        let [rot_x, rot_y] = this.rotation_group.style.transform;
-        rot_x.angle = this.angle;
-        rot_y.angle = 2 * this.angle;
-        this.img.propagate_transform3d();
-        this.container.innerHTML = this.img.svg();
-        window.requestAnimationFrame(this.update.bind(this));
+    parameters_string(data) {
+        let [a, b, c] = this.vertices;
+        this.points = [
+            weighted_center(a, b, data.alpha),
+            weighted_center(b, a, data.alpha),
+            weighted_center(b, c, data.alpha),
+            weighted_center(c, b, data.alpha),
+            weighted_center(c, a, data.alpha),
+            weighted_center(a, c, data.alpha)];
+        return super.parameters_string(data);
+    }
+}
+
+class ParametrizedPentagonalFace extends NormalPolyline3D {
+    constructor(vertex, neighbors) {
+        super([], true, vertex);
+        this.vertex = vertex;
+        this.neighbors = neighbors;
+    }
+
+    parameters_string(data) {
+        this.points = this.neighbors.map(p => weighted_center(this.vertex, p, data.alpha));
+        return super.parameters_string(data);
     }
 }
 
 class Icosahedron {
     constructor(container) {
         this.container = container;
-        this.angle = 0;
-        let scale = 200;
+        this.time = 0;
+        let scale = 150;
         this.img = new SVGNode(
             new SVG(4 * scale, 4 * scale),
             new Style({
@@ -88,7 +79,10 @@ class Icosahedron {
             new Style().translate(2 * scale, 2 * scale));
         this.img.add(ref);
 
-        this.icosahedron = new SVGNode(new Group(), new Style().rotate_x(0).rotate_y(0));
+        this.icosahedron = new SVGNode(
+            new Group(),
+            new Style({}, {'alpha': .5}).rotate_x(0).rotate_y(0));
+
         ref.add(this.icosahedron);
 
         let pentagon_faces_style = new Style({'fill': 'green'});
@@ -128,16 +122,11 @@ class Icosahedron {
 
         // make pentagon faces (one for each of the icosahedron vertices)
         for (let i = 0; i < 12; i++) {
-            let pentagon_vertices = [];
+            let neighbors = [];
             for (let j = 0; j < 12; j++) {
-                if (graph_matrix[i][j]) {
-                    pentagon_vertices.push(weighted_center(vertices[i], vertices[j], 2/3));
-                }
+                if (graph_matrix[i][j]) { neighbors.push(vertices[j]); }
             }
-            pentagon_faces.add(new NormalPolyline3D(
-                connect_convex_polygon(pentagon_vertices),
-                true,
-                vertices[i]));
+            pentagon_faces.add(new ParametrizedPentagonalFace(vertices[i], connect_convex_polygon(neighbors)));
         }
 
         // make hexagon faces (one for each of the icosahedron faces)
@@ -145,21 +134,12 @@ class Icosahedron {
             for (let j = i + 1; j < 12; j++) {
                 for (let k = j + 1; k < 12; k++) {
                     if (graph_matrix[i][j] && graph_matrix[j][k] && graph_matrix[k][i]) {
-                        let a = vertices[i];
-                        let b = vertices[j];
-                        let c = vertices[k];
                         let normal = vec3.cross(
                             vec3.create(),
-                            vec3.subtract(vec3.create(), b, a),
-                            vec3.subtract(vec3.create(), c, a));
-                        if (vec3.dot(normal, a) < 0) { vec3.negate(normal, normal); }
-                        hexagon_faces.add(new NormalPolyline3D([
-                            weighted_center(a, b, 2/3),
-                            weighted_center(b, a, 2/3),
-                            weighted_center(b, c, 2/3),
-                            weighted_center(c, b, 2/3),
-                            weighted_center(c, a, 2/3),
-                            weighted_center(a, c, 2/3)], true, normal));
+                            vec3.subtract(vec3.create(), vertices[j], vertices[i]),
+                            vec3.subtract(vec3.create(), vertices[k], vertices[i]));
+                        if (vec3.dot(normal, vertices[i]) < 0) { vec3.negate(normal, normal); }
+                        hexagon_faces.add(new ParametrizedHexagonalFace([vertices[i], vertices[j], vertices[k]], normal));
                     }
                 }
             }
@@ -184,27 +164,30 @@ class Icosahedron {
         for (let face of pentagon_faces) {
             let t = face.tag;
             if (t.get_normal()[2] > 0) {
-                pf_front.add(t);
+                pf_front.add(face);
             } else {
-                pf_back.add(t);
+                pf_back.add(face);
             }
         }
         for (let face of hexagon_faces) {
             let t = face.tag;
             if (t.get_normal()[2] > 0) {
-                hf_front.add(t);
+                hf_front.add(face);
             } else {
-                hf_back.add(t);
+                hf_back.add(face);
             }
         }
     }
 
     update() {
-        this.angle += .2;
+        this.time += 1;
         let [rot_x, rot_y] = this.icosahedron.style.transform;
-        rot_x.angle = 2 * this.angle;
-        rot_y.angle = 3 * this.angle;
+        rot_x.angle = .4 * this.time;
+        rot_y.angle = .6 * this.time;
+        let lambda = (Math.sin(.02 * this.time) + 1) / 2;
+        this.icosahedron.style.data.alpha = 1 - (lambda / 2);
 
+        this.img.propagate_data();
         this.img.propagate_transform3d();
         this.order_faces();
 
@@ -213,78 +196,6 @@ class Icosahedron {
     }
 }
 
-function make_rubiks_cube() {
-    let img = new SVGNode(new SVG(500, 500));
-    // repère de référence (pour recentrer l'image à la fin)
-    let ref = new SVGNode(new Group(), new Style().translate(250, 250));
-
-    let cube = new SVGNode(new Group(), new Style().rotate_y(-15).rotate_x(20));
-
-    let sticker = new Rectangle(-45, -45, 90, 90, 10, 10);
-    // une bande de 3 stickers
-    let strip_content = [
-        new SVGNode(new Rectangle(-50, -150, 100, 300), new Style({'fill': 'black'})),
-        new SVGNode(sticker, new Style()),
-        new SVGNode(sticker, new Style().translate(0, -100)),
-        new SVGNode(sticker, new Style().translate(0, 100)),
-    ];
-
-    // face noire pour boucher les trous
-    cube.add(new Rectangle(-150, -150, 300, 300), new Style().rotate_y(90).translate3d(-50, 0, 0));
-
-    // les bandes de couleur sur le bloc principal du cube
-    cube.add(new SVGNode(
-        new Group(),
-        new Style({'fill': 'red'}).translate3d(0, 0, -150),
-        strip_content));
-    cube.add(new SVGNode(
-        new Group(),
-        new Style({'fill': 'red'}).translate3d(100, 0, -150),
-        strip_content));
-    cube.add(new SVGNode(
-        new Group(),
-        new Style({'fill': 'green'}).translate3d(0, 0, -150).rotate_x(-90),
-        strip_content));
-    cube.add(new SVGNode(
-        new Group(),
-        new Style({'fill': 'green'}).translate3d(100, 0, -150).rotate_x(-90),
-        strip_content));
-
-    // la tranche qui est tournée par rapport au reste du cube
-    let rotated_slice = new SVGNode(new Group(), new Style().rotate_x(30));
-    rotated_slice.set_name("slice");
-
-    // les bandes de couleur sur la tranche
-    rotated_slice.add(new SVGNode(
-        new Group(),
-        new Style({'fill': 'red'}).translate3d(-100, 0, -150),
-        strip_content));
-    rotated_slice.add(new SVGNode(
-        new Group(),
-        new Style({'fill': 'green'}).translate3d(-100, 0, -150).rotate_x(-90),
-        strip_content));
-    rotated_slice.add(new SVGNode(
-        new Group(),
-        new Style({'fill': 'blue'}).translate3d(-100, 0, -150).rotate_y(90),
-        strip_content));
-    rotated_slice.add(new SVGNode(
-        new Group(),
-        new Style({'fill': 'blue'}).translate3d(0, 0, -150).rotate_y(90),
-        strip_content));
-    rotated_slice.add(new SVGNode(
-        new Group(),
-        new Style({'fill': 'blue'}).translate3d(100, 0, -150).rotate_y(90),
-        strip_content));
-    cube.add(rotated_slice);
-
-    ref.add(cube);
-    img.add(ref);
-
-    img.propagate_transform3d();
-    return img;
-}
-
 window.onload = () => {
-    // new Tetrahedron(document.getElementById("svg-container")).update();
     new Icosahedron(document.getElementById("svg-container")).update();
 };
