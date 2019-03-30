@@ -59,7 +59,9 @@ class Tetrahedron {
 
     update() {
         this.angle += 1;
-        this.rotation_group.style.transform = [new RotateX(this.angle), new RotateY(2 * this.angle)];
+        let [rot_x, rot_y] = this.rotation_group.style.transform;
+        rot_x.angle = this.angle;
+        rot_y.angle = 2 * this.angle;
         this.img.propagate_transform3d();
         this.container.innerHTML = this.img.svg();
         window.requestAnimationFrame(this.update.bind(this));
@@ -70,7 +72,7 @@ class Icosahedron {
     constructor(container) {
         this.container = container;
         this.angle = 0;
-        let scale = 100;
+        let scale = 200;
         this.img = new SVGNode(
             new SVG(4 * scale, 4 * scale),
             new Style({
@@ -86,11 +88,11 @@ class Icosahedron {
             new Style().translate(2 * scale, 2 * scale));
         this.img.add(ref);
 
-        this.icosahedron = new SVGNode(new Group());
+        this.icosahedron = new SVGNode(new Group(), new Style().rotate_x(0).rotate_y(0));
         ref.add(this.icosahedron);
 
-        let pentagon_faces_style = new Style({'fill': 'lightgreen'});
-        let hexagon_faces_style = new Style({'fill': 'lightblue'});
+        let pentagon_faces_style = new Style({'fill': 'green'});
+        let hexagon_faces_style = new Style({'fill': 'yellow'});
 
         let pentagon_faces_back = new SVGNode(new Group(), pentagon_faces_style);
         let pentagon_faces = new SVGNode(new Group(), pentagon_faces_style);
@@ -199,9 +201,13 @@ class Icosahedron {
 
     update() {
         this.angle += .2;
-        this.icosahedron.style.transform = [new RotateX(2 * this.angle), new RotateY(3 * this.angle)];
+        let [rot_x, rot_y] = this.icosahedron.style.transform;
+        rot_x.angle = 2 * this.angle;
+        rot_y.angle = 3 * this.angle;
+
         this.img.propagate_transform3d();
         this.order_faces();
+
         this.container.innerHTML = this.img.svg();
         window.requestAnimationFrame(this.update.bind(this));
     }

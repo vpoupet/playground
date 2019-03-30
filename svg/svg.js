@@ -98,7 +98,7 @@ class Style {
     }
 
     transform3d(x0, x1, x2, y0, y1, y2, z0, z1, z2, tx=0, ty=0, tz=0) {
-        return this.add_transform(new Transform3D(x0, x1, x2, y0, y1, y2, z0, z1, z2, tx, ty, tz));
+        return this.add_transform(new Matrix3D(x0, x1, x2, y0, y1, y2, z0, z1, z2, tx, ty, tz));
     }
 
     has_transform3d() {
@@ -106,7 +106,7 @@ class Style {
             return true;
         }
         for (let t of this.transform) {
-            if (t instanceof Matrix3D) {
+            if (t instanceof Transform3D) {
                 return true;
             }
         }
@@ -116,12 +116,12 @@ class Style {
     get_transform3d() {
         let m = mat4.create();
         for (let t of this.transform) {
-            mat4.multiply(m, m, t.as_matrix3d().matrix);
+            mat4.multiply(m, m, t.as_mat4());
         }
         if (this.parent_transform !== undefined) {
-            mat4.multiply(m, this.parent_transform.matrix, m);
+            mat4.multiply(m, this.parent_transform.as_mat4(), m);
         }
-        return new Matrix3D(m);
+        return new Transform3D(m);
     }
 
     svg() {
@@ -321,7 +321,7 @@ class SVGNode {
 }
 
 class Transform {
-    as_matrix3d() {
+    as_mat4() {
         return mat4.create();
     }
 }
@@ -341,7 +341,7 @@ class Matrix extends Transform {
         return `matrix(${this.a} ${this.b} ${this.c} ${this.d} ${this.e} ${this.f})`
     }
 
-    as_matrix3d() {
+    as_mat4() {
         return mat4.fromValues(this.a, this.b, 0, 0, this.c, this.d, 0, 0, 0, 0, 1, 0, this.e, this.f, 0, 1);
     }
 }
@@ -357,7 +357,7 @@ class Translate extends Transform {
         return `translate(${this.dx} ${this.dy})`;
     }
 
-    as_matrix3d() {
+    as_mat4() {
         let r = {};
         return mat4.fromTranslation(r, vec3.fromValues(this.dx, this.dy, 0));
     }
@@ -379,7 +379,7 @@ class Rotate extends Transform {
         }
     }
 
-    as_matrix3d() {
+    as_mat4() {
         let r = {};
         return mat4.fromZRotation(r, radians(this.angle));
     }
@@ -401,7 +401,7 @@ class Scale extends Transform {
         }
     }
 
-    as_matrix3d() {
+    as_mat4() {
         let r = {};
         return mat4.fromScaling(r, vec3.fromValues(this.sx, this.sy, 1));
     }
@@ -417,8 +417,8 @@ class SkewX extends Transform {
         return `skewX(${this.angle})`;
     }
 
-    as_matrix3d() {
-        return new Transform3D(1, 0, 0, Math.tan(radians(this.angle)), 1, 0, 0, 0, 1);
+    as_mat4() {
+        return new Matrix3D(1, 0, 0, Math.tan(radians(this.angle)), 1, 0, 0, 0, 1);
     }
 }
 
@@ -432,92 +432,79 @@ class SkewY extends Transform {
         return `skewY(${this.angle})`;
     }
 
-    as_matrix3d() {
-        return new Transform3D(1, Math.tan(radians(this.angle)), 0, 0, 1, 0, 0, 0, 1);
+    as_mat4() {
+        return new Matrix3D(1, Math.tan(radians(this.angle)), 0, 0, 1, 0, 0, 0, 1);
     }
 }
 
-class Matrix3D extends Transform {
+class Transform3D extends Transform {
     constructor(matrix=mat4.create()) {
         super();
         this.matrix = matrix;
     }
 
-    apply_to(v) {
-        v = vec3.fromValues(...v);
-        return vec3.transformMat4(v, v, this.matrix);
+    apply_to(point) {
+        let v = vec3.fromValues(...point);
+        return vec3.transformMat4(v, v, this.as_mat4());
     }
-
-    translate(dx, dy, dz) {
-        return mat4.translate(this.matrix, this.matrix, vec3.fromValues(dx, dy, dz));
-    }
-
-    rotate_x(angle) {
-        return mat4.rotateX(this.matrix, this.matrix, radians(angle));
-    }
-
-    rotate_y(angle) {
-        return mat4.rotateY(this.matrix, this.matrix, radians(angle));
-    }
-
-    rotate_z(angle) {
-        return mat4.rotateZ(this.matrix, this.matrix, radians(angle));
-    }
-
-    scale(sx, sy=undefined, sz=undefined) {
-        if (sy === undefined) {
-            sy = sx;
-            sz = sx;
-        } else if (sz === undefined) {
-            sz = 1;
-        }
-        return mat4.scale(this.matrix, this.matrix, vec3.fromValues(sx, sy, sz));
-    }
-
-    transform2d(a, b, c, d, e=0, f=0) {
-        let t = mat4.fromValues(a, b, 0, 0, c, d, 0, 0, 0, 0, 1, 0, e, f, 0, 1);
-        return mat4.multiply(this.matrix, t, this.matrix);
-    }
-
+    
     svg() {
-        let m = this.matrix;
+        let m = this.as_mat4();
         return new Matrix(m[0], m[1], m[4], m[5], m[12], m[13]).svg();
     }
 
-    as_matrix3d() {
-        return this;
+    as_mat4() {
+        return this.matrix;
     }
 }
 
-class Translate3D extends Matrix3D {
+class Translate3D extends Transform3D {
     constructor(dx, dy, dz) {
         super();
-        mat4.fromTranslation(this.matrix, vec3.fromValues(dx, dy, dz));
+        this.dx = dx;
+        this.dy = dy;
+        this.dz = dz;
+    }
+
+    as_mat4() {
+        return mat4.fromTranslation(this.matrix, vec3.fromValues(this.dx, this.dy, this.dz));
     }
 }
 
-class RotateX extends Matrix3D {
+class RotateX extends Transform3D {
     constructor(angle) {
         super();
-        mat4.fromXRotation(this.matrix, radians(angle));
+        this.angle = angle;
+    }
+
+    as_mat4() {
+        return mat4.fromXRotation(this.matrix, radians(this.angle));
     }
 }
 
-class RotateY extends Matrix3D {
+class RotateY extends Transform3D {
     constructor(angle) {
         super();
-        mat4.fromYRotation(this.matrix, radians(angle));
+        this.angle = angle;
+    }
+
+    as_mat4() {
+        return mat4.fromYRotation(this.matrix, radians(this.angle));
     }
 }
 
-class RotateZ extends Matrix3D {
+class RotateZ extends Transform3D {
     constructor(angle) {
         super();
-        mat4.fromZRotation(this.matrix, radians(angle));
+        this.angle = angle;
+    }
+
+    as_mat4() {
+        return mat4.fromZRotation(this.matrix, radians(this.angle));
     }
 }
 
-class Scale3D extends Matrix3D {
+class Scale3D extends Transform3D {
     constructor(sx, sy=undefined, sz=undefined) {
         if (sy === undefined) {
             sy = sx;
@@ -526,13 +513,38 @@ class Scale3D extends Matrix3D {
             sz = 1;
         }
         super();
-        mat4.fromScaling(this.matrix, vec3.fromValues(sx, sy, sz));
+        this.sx = sx;
+        this.sy = sy;
+        this.sz = sz;
+    }
+
+    as_mat4() {
+        return mat4.fromScaling(this.matrix, vec3.fromValues(this.sx, this.sy, this.sz));
     }
 }
 
-class Transform3D extends Matrix3D {
+class Matrix3D extends Transform3D {
     constructor(x0, x1, x2, y0, y1, y2, z0, z1, z2, tx=0, ty=0, tz=0) {
         super();
-        this.matrix = mat4.fromValues(x0, x1, x2, 0, y0, y1, y2, 0, z0, z1, z2, 0, tx, ty, tz, 1);
+        this.x0 = x0;
+        this.x1 = x1;
+        this.x2 = x2;
+        this.y0 = y0;
+        this.y1 = y1;
+        this.y2 = y2;
+        this.z0 = z0;
+        this.z1 = z1;
+        this.z2 = z2;
+        this.tx = tx;
+        this.ty = ty;
+        this.tz = tz;
+    }
+
+    as_mat4() {
+        return mat4.fromValues(
+            this.x0, this.x1, this.x2, 0,
+            this.y0, this.y1, this.y2, 0,
+            this.z0, this.z1, this.z2, 0,
+            this.tx, this.ty, this.tz, 1);
     }
 }
