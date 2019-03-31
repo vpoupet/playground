@@ -1,4 +1,4 @@
-function connect_convex_polygon(points) {
+function connect_chain(points) {
     let sequence = [];
     let last_point = points.pop();
     sequence.push(last_point);
@@ -10,6 +10,14 @@ function connect_convex_polygon(points) {
     return sequence;
 }
 
+/**
+ * Returns the weighted center of two 3D points
+ *
+ * @param p1 {number[]} coordinates of the first point (array of 3 numbers)
+ * @param p2 {number[]} coordinates of the second point (array of 3 numbers)
+ * @param alpha {number} weight of the first point (second point will have weight (1-alpha))
+ * @returns {vec3} coordinates of the weighted center of the two points (array of 3 numbers)
+ */
 function weighted_center(p1, p2, alpha) {
     let x1 = vec3.scale(vec3.create(), p1, alpha);
     let x2 = vec3.scale(vec3.create(), p2, 1 - alpha);
@@ -126,7 +134,7 @@ class Icosahedron {
             for (let j = 0; j < 12; j++) {
                 if (graph_matrix[i][j]) { neighbors.push(vertices[j]); }
             }
-            pentagon_faces.add(new ParametrizedPentagonalFace(vertices[i], connect_convex_polygon(neighbors)));
+            pentagon_faces.add(new ParametrizedPentagonalFace(vertices[i], connect_chain(neighbors)));
         }
 
         // make hexagon faces (one for each of the icosahedron faces)
