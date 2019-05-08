@@ -1,0 +1,102 @@
+$main-font: 'Inconsolata', monospace
+$cell-font: 'Inconsolata', monospace
+
+$bg-color: #F1F4F9
+$text-color: #27374E
+$alt-text-color: #3C7BDB
+$border-color: #27374E
+$cell-bg-color: #FFFFFF
+$cell-hover-color: #D5EAFE
+$cell-highlight-color: #DBE1E8
+$cell-focus-color: #AED5FA
+$cell-border: #D7DBE4
+
+*
+  margin: 0
+  padding: 0
+  box-sizing: border-box
+
+html
+  --cell-size: 10vw
+  @media(min-width: 800px)
+    --cell-size: 80px
+
+
+body
+  display: flex
+  flex-direction: column
+  align-items: center
+  width: 100%
+  background: $bg-color
+  font-family: $main-font
+  color: $text-color
+  font-size: 18px
+
+h1
+  margin: 30px 0
+
+#app
+  display: flex
+  flex-direction: column
+  align-items: center
+  width: 370px
+
+.grid
+  box-sizing: content-box
+  width: calc(9 * var(--cell-size))
+  display: flex
+  flex-wrap: wrap
+  border: 2px solid $border-color
+  outline: none
+
+.cell
+  width: var(--cell-size)
+  height: var(--cell-size)
+  font-family: $cell-font
+  font-size: calc(.8 * var(--cell-size))
+  color: $alt-text-color
+  font-weight: lighter
+  cursor: pointer
+  background: $cell-bg-color
+  border: .5px solid $cell-border
+  border-collapse: collapse
+  display: flex
+  justify-content: center
+  align-items: center
+
+  &:hover
+    background: $cell-hover-color
+
+  &.locked
+    color: $text-color
+
+  &.highlighted
+    background: $cell-highlight-color
+
+  &.focused
+    background: $cell-focus-color
+
+  &.R2, &.R5
+    border-bottom: 2px solid $text-color
+
+  &.C2, &.C5
+    border-right: 2px solid $text-color
+
+#buttons
+  display: flex
+  margin: 10px 0
+  flex-direction: row
+  justify-content: space-between
+  width: 100%
+
+button
+  padding: 3px
+  width: 20%
+  font-size: calc(0.3 * var(--cell-size))
+
+#info
+  width: calc(10 * var(--cell-size))
+  line-height: 1.6
+  margin-top: 30px
+  ul > li
+    margin-left: 20px

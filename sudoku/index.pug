@@ -1,0 +1,30 @@
+doctype html
+html
+  head
+    meta(charset="UTF-8")
+    title Sudoku
+    link(rel="stylesheet" href="style.css")
+    link(href="https://fonts.googleapis.com/css?family=Inconsolata" rel="stylesheet")
+  body
+    h1 Sudoku
+    #app
+    #info
+      h2 Instructions
+      ul
+        li Click on a cell to toggle selection
+        li Move selection with arrow keys
+        li Type a digit (1-9) to set the value of the selected cell
+        li Erase the selected cell's value with Backspace
+        li The Clear button clears the value of all non-locked cells
+        li The Lock button locks all cells with a value
+        li The Unlock button unlocks all cells
+        li The Solve button searches for a solution of the current grid
+          ul
+            li Cell values cannot be changed while solver is running
+            li Solver can be interrupte by clicking on the same button (labeled "Stop" during computation)
+            li If a solution is found, values are displayed
+            li If no solution exists, the solver ends (button labeled "Solve" again) but cells are not modified
+
+    script(src="react-0.14.3.js")
+    script(src="react-dom-0.14.3.js")
+    script(src="app.js")

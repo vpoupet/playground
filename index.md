@@ -4,6 +4,10 @@ This projects is a collection of small experimentations with web technologies (m
 
 **Click on the title of each section to access the corresponding page (hosted on github.io).**
 
+## [Sudoku](https://vpoupet.github.io/playground/sudoku/index.html)
+
+A *Sudoku* solver. Main page is in React, solver runs in a *web worker*.
+
 ## [SVG](https://vpoupet.github.io/playground/svg/index.html)
 
 Generation of SVG code with JS, including support for 3D transformations (not in the SVG standard) by computing the 
