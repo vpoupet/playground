@@ -6,7 +6,8 @@ This projects is a collection of small experimentations with web technologies (m
 
 ## [Sudoku](https://vpoupet.github.io/playground/sudoku/index.html)
 
-A *Sudoku* solver. Main page is in React, solver runs in a *web worker*.
+A *Sudoku* solver. Main page is in React, solver runs in a *web worker* using
+[Donald Knuth's dancing links](https://arxiv.org/abs/cs/0011047) technique.
 
 ## [SVG](https://vpoupet.github.io/playground/svg/index.html)
 
