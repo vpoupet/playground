@@ -159,16 +159,20 @@ class Header extends Node {
 
     /**
      * Chooses a random node in the column
-     * @returns {Node} the selected Node
+     * @returns {Node}
      */
-    getRandomRow() {
-        let index = ~~(Math.random() * this.size);
-        let node = this.down;
-        for (let i = 0; i < index; i++) {
-            node = node.down;
+    chooseRandomRow() {
+        if (this.size === 0) {
+            return undefined;
+        } else {
+            let node = this.down;
+            let index = ~~(Math.random() * this.size);
+            for (let i = 0; i < index; i++) {
+                node = node.down;
+            }
+            this.firstChosen = node;
+            return node;
         }
-        this.firstChosen = node;
-        return node;
     }
 }
 
@@ -320,18 +324,69 @@ class Sudoku {
     solve() {
         this.solution = [];
         while (this.root.right !== this.root) {
-            // pick column with smallest size
-            let node;
-            let header = this.getMinHeader();
-            if (header.size === 0) {
+            let node = this.getMinHeader().chooseRandomRow();
+            if (node === undefined) {
                 node = this.backTrack();
-                if (node === undefined) return false;
-            } else {
-                node = header.getRandomRow();
             }
-            this.pushChoice(node);
+            if (node === undefined) {
+                return false;
+            } else {
+                this.pushChoice(node);
+            }
         }
         return true;
+    }
+
+    count_solutions() {
+        this.solution = [];
+        this.nb_solutions = 0;
+        while (true) {
+            let node = this.getMinHeader().chooseRandomRow();
+            if (node === undefined) {
+                node = this.backTrack();
+            }
+            if (node === undefined) {
+                return nb_solutions;
+            } else {
+                this.pushChoice(node);
+            }
+        }
+    }
+
+    checkUniqueSolution() {
+        this.solution = [];
+        let hasPreviousSolution = false;
+        while (true) {
+            let node;
+            if (this.root.right === this.root) {
+                // no more column to satisfy
+                if (hasPreviousSolution) {
+                    // multiple solutions exist
+                    return false;
+                } else {
+                    // record that a solution was found and backtrack
+                    hasPreviousSolution = true;
+                    node = this.backTrack();
+                }
+            } else {
+                // pick column with smallest size
+                let header = this.getMinHeader();
+                if (header.size === 0) {
+                    // column cannot be satisfied, backtrack
+                    node = this.backTrack();
+                } else {
+                    // pick first node in column
+                    node = header.down;
+                    header.firstChosen = node;
+                }
+            }
+            if (node === undefined) {
+                // finished running through all possibilities
+                return hasPreviousSolution;
+            } else {
+                this.pushChoice(node);
+            }
+        }
     }
 
     /**
