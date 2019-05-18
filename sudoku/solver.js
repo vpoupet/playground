@@ -1,13 +1,18 @@
 /**
- * Representation of a Matrix cell as a link in doubly-linked lists.
+ * A node in a grid of doubly-linked lists
  */
 class Node {
-    constructor() {
+    constructor(rowLabel=undefined) {
         /**
          * The column header
          * @type {Header}
          */
         this.header = undefined;
+        /**
+         * Index of the node's row
+         * @type {number}
+         */
+        this.rowLabel = rowLabel;
         /**
          * Up neighbor node
          * @type {Node}
@@ -31,51 +36,36 @@ class Node {
     }
 
     /**
-     * Removes the node from the column
+     * Returns an iterator that iterates through the node's row.
+     *
+     * @param {boolean} strict If true, the iteration skips the current node.
+     * @param {boolean} reverse If true, the iteration goes leftward. If false, it goes rightward.
+     * @returns {IterableIterator<Node>}
      */
-    remove() {
-        this.up.down = this.down;
-        this.down.up = this.up;
-        this.header.size -= 1;
-    }
-
-    /**
-     * Inserts the node back in its original column
-     */
-    restore() {
-        this.up.down = this;
-        this.down.up = this;
-        this.header.size += 1;
-    }
-
-    /**
-     * Returns the next node on the same column until reaching the first chosen node on the column
-     * @returns {Node} the next Node or undefined if all nodes have been visited
-     */
-    getNextRow() {
-        let nextNode = this.down;
-        if (nextNode === this.header) nextNode = nextNode.down;
-        if (nextNode !== this.header && nextNode !== this.header.firstChosen) {
-            return nextNode;
-        } else {
-            return undefined;
+    *iterateRow(strict=false, reverse=false) {
+        if (!strict) yield this;
+        let node = reverse ? this.left : this.right;
+        while(node !== this) {
+            yield node;
+            node = reverse ? node.left : node.right;
         }
     }
 
     /**
-     * Returns the label of the node row (union of all column header labels for all columns that intersect the
-     * node's row)
+     * Returns an iterator that iterates through the node's column.
+     * The iterator skips the column header unless it its the current node (and parameter strict is false).
      *
-     * @returns {Object}
+     * @param {boolean} strict If true, the iteration skips the current node.
+     * @param {boolean} reverse If true, the iteration goes upward. If false, it goes downward.
+     * @returns {IterableIterator<Node>}
      */
-    getLabel() {
-        let label = {};
-        let node = this;
-        do {
-            Object.assign(label, node.header.label);
-            node = node.right;
-        } while (node !== this);
-        return label;
+    *iterateColumn(strict=false, reverse=false) {
+        if (!strict) yield this;
+        let node = reverse ? this.up : this.down;
+        while(node !== this) {
+            if (node !== this.header) yield node;
+            node = reverse ? node.up : node.down;
+        }
     }
 }
 
@@ -83,30 +73,24 @@ class Node {
  * Representation of a column header
  */
 class Header extends Node {
-    constructor(name=undefined) {
+    constructor(label=undefined) {
         super();
         this.header = this;
         /**
          * Column label
          * @type {Object}
          */
-        this.label = name;
+        this.label = label;
         /**
          * Number of elements in the column
          * @type {number}
          */
         this.size = 0;
-        /**
-         * First node in the column that was randomly chosen during solving (if any)
-         * @type {Node}
-         */
-        this.firstChosen = undefined;
     }
 
     /**
      * Appends a Node at the end of the column (before the header)
-     * @param {Node} node
-     * @returns {Node} the appended Node
+     * @param {Node} node the node to be appended to the column
      */
     append(node) {
         node.header = this;
@@ -122,19 +106,14 @@ class Header extends Node {
      * Removes the column from the main structure and remove all rows that intersect it
      */
     cover() {
-        // remove header from list
         this.left.right = this.right;
         this.right.left = this.left;
-        // remove all lines that intersect the column
-        let columnNode = this.down;
-        while (columnNode !== this) {
-            // remove line
-            let lineNode = columnNode.right;
-            while (lineNode !== columnNode) {
-                lineNode.remove();
-                lineNode = lineNode.right;
+        for (let columnNode of this.iterateColumn(true)) {
+            for (let lineNode of columnNode.iterateRow(true)) {
+                lineNode.up.down = lineNode.down;
+                lineNode.down.up = lineNode.up;
+                lineNode.header.size -= 1;
             }
-            columnNode = columnNode.down;
         }
     }
 
@@ -142,17 +121,13 @@ class Header extends Node {
      * Restores the column in the main structure and all rows that intersect it
      */
     uncover() {
-        // restore all lines that intersect the column
-        let columnNode = this.up;
-        while (columnNode !== this) {
-            let lineNode = columnNode.left;
-            while (lineNode !== columnNode) {
-                lineNode.restore();
-                lineNode = lineNode.left;
+        for (let columnNode of this.iterateColumn(true, true)) {
+            for (let lineNode of columnNode.iterateRow(true, true)) {
+                lineNode.up.down = lineNode;
+                lineNode.down.up = lineNode;
+                lineNode.header.size += 1;
             }
-            columnNode = columnNode.up;
         }
-        // restore header to the list
         this.left.right = this;
         this.right.left = this;
     }
@@ -165,226 +140,203 @@ class Header extends Node {
         if (this.size === 0) {
             return undefined;
         } else {
-            let node = this.down;
             let index = ~~(Math.random() * this.size);
+            let node = this.down;
             for (let i = 0; i < index; i++) {
                 node = node.down;
             }
-            this.firstChosen = node;
             return node;
         }
     }
 }
 
 /**
- * Representation of a Sudoku constraint structure
+ * Represents an instance of an ExactCover problem, to be solved with the "dancing links" implementation.
  */
-class Sudoku {
+class ExactCover {
     /**
-     * @param values the list of 81 values attributed to each cell (all cells with values other than 1-9 will be
-     * unassigned)
+     * @param {boolean[][]} matrix Boolean matrix representing the input of the problem. Rows represent possible
+     * choices and columns represent constraints. A solution of the problem is a list of rows that exactly cover all
+     * columns.
+     * @param {Object[]} rowLabels (optional) List of labels to assign to each row (choices)
+     * @param {Object[]} colLabels (optional) List of labels to assign to each column (constraints)
      */
-    constructor(values) {
-        // create column headers (one for each constraint)
-        let headers = [];
-        // each cell must be filled
-        for (let row = 0; row < 9; row++) {
-            for (let col = 0; col < 9; col++) {
-                headers.push(new Header({row: row, col: col}));
-            }
+    constructor(matrix, rowLabels=undefined, colLabels=undefined) {
+        let height = matrix.length;
+        let width = matrix[0].length;
+
+        if (rowLabels === undefined) {
+            rowLabels = new Array(height).fill(0).map((c, i) => i);
         }
-        // each value must appear in each row
-        for (let row = 0; row < 9; row++) {
-            for (let i = 0; i < 9; i++) {
-                headers.push(new Header({row: row, value: i + 1}));
-            }
-        }
-        // each value must appear in each column
-        for (let col = 0; col < 9; col++) {
-            for (let i = 0; i < 9; i++) {
-                headers.push(new Header({col: col, value: i + 1}));
-            }
-        }
-        // each value must appear in each area
-        for (let area = 0; area < 9; area++) {
-            for (let i = 0; i < 9; i++) {
-                headers.push(new Header({area: area, value: i + 1}));
-            }
+        if (colLabels === undefined) {
+            colLabels = new Array(width).fill(0).map((c, i) => i);
         }
 
-        // link headers
-        for (let i = 0; i < headers.length - 1; i++) {
+        // make and link headers
+        let headers = new Array(width).fill(undefined).map((c, i) => new Header(colLabels[i]));
+        for (let i = 0; i < width - 1; i++) {
             headers[i].right = headers[i + 1];
             headers[i + 1].left = headers[i];
         }
+        // insert root
         this.root = new Header();
         this.root.right = headers[0];
-        headers[0].left = this.root;
         this.root.left = headers[headers.length - 1];
-        headers[headers.length - 1].right = this.root;
-
-        /** @type {Array} List of nodes that correspond to lines that were initially assigned */
-        let assignedNodes = [];
-
-        // create and link nodes for each line
-        for (let row = 0; row < 9; row++) {
-            for (let col = 0; col < 9; col++) {
-                for (let i = 0; i < 9; i++) {
-                    // add row of satisfied constraints
-                    let area = 3 * ~~(row / 3) + ~~(col / 3);
-                    let nodes = [
-                        headers[9 * row + col].append(new Node()),
-                        headers[81 + 9 * row + i].append(new Node()),
-                        headers[162 + 9 * col + i].append(new Node()),
-                        headers[243 + 9 * area + i].append(new Node()),
-                    ];
-                    if (values[9 * row + col] === i + 1) {
-                        // this value is initially assigned (line is marked to be inserted in solution)
-                        assignedNodes.push(nodes[0]);
-                    }
-                    for (let j = 0; j < nodes.length; j++) {
-                        nodes[j].right = nodes[(j + 1) % nodes.length];
-                        nodes[(j + 1) % 4].left = nodes[j];
-                    }
+        this.root.right.left = this.root;
+        this.root.left.right = this.root;
+        this.rows = [];
+        // make and link row nodes for each row
+        for (let i = 0; i < height; i++) {
+            let rowNodes = [];
+            for (let j = 0; j < width; j++) {
+                if (matrix[i][j]) {
+                    let node = new Node(rowLabels[this.rows.length]);
+                    headers[j].append(node);
+                    rowNodes.push(node);
                 }
             }
+            for (let j = 0; j < rowNodes.length; j++) {
+                rowNodes[j].right = rowNodes[(j + 1) % rowNodes.length];
+                rowNodes[(j + 1) % rowNodes.length].left = rowNodes[j];
+            }
+            this.rows.push(rowNodes[0]);
         }
 
         this.solution = [];
-        for (let node of assignedNodes) {
-            this.pushChoice(node, false);
-        }
-    }
-
-    /**
-     * Backtracks in the solution (pop last choice and restore columns in the main structure) and returns the next
-     * choice
-     *
-     * @returns {Node} the next choice to insert in the solution (undefined if no available choice,
-     * puzzle has no solution)
-     */
-    backTrack() {
-        while(this.solution.length > 0) {
-            let node = this.solution.pop();
-            // uncover all columns that intersect the node's row
-            let rowNode = node.left;
-            do {
-                rowNode.header.uncover();
-                rowNode = rowNode.left;
-            } while (rowNode !== node.left);
-            // try next node on same column (or backtrack more if none)
-            node = node.getNextRow();
-            if (node !== undefined) {
-                return node;
-            }
-        }
-        // nothing to backtrack (no solution)
-        return undefined;
     }
 
     /**
      * Adds a choice to the solution and removes the columns that intersect the choice's row
-     * @param {Node} node the choice's node
-     * @param {boolean} canBacktrack whether the choice should be inserted in the solution for backtracking (false only
-     * when setting initial values)
+     *
+     * @param choice The choice to be inserted.
+     * @param choice.node {Node}
+     * @param choice.iterator {IterableIterator<Node>}
      */
-    pushChoice(node, canBacktrack=true) {
-        if (canBacktrack) this.solution.push(node);
-
+    pushChoice(choice) {
         // cover all columns that intersect the node's row
-        let rowNode = node;
-        do {
+        for (let rowNode of choice.node.iterateRow()) {
             rowNode.header.cover();
-            rowNode = rowNode.right;
-        } while (rowNode !== node)
+        }
+        this.solution.push(choice);
     }
 
     /**
-     * Returns the first available column header with minimal size
-     * @returns {Header}
+     * Removes the last choice from the solution, and uncovers all columns that intersect the choice's row
+     *
+     * @returns {{node: Node, iterator: IterableIterator<Node>}} The choice that was removed.
      */
-    getMinHeader() {
-        let minHeader = this.root.right;
-        let minSize = minHeader.size;
-        let header = minHeader.right;
-        while (header !== this.root) {
-            if (header.size < minSize) {
-                minSize = header.size;
-                minHeader = header;
+    popChoice() {
+        let choice = this.solution.pop();
+        if (choice === undefined) {
+            // there is no choice to remove from the solution
+            return undefined;
+        } else if (choice.iterator === undefined) {
+            // the choice has no iterator -> it should not be removed
+            this.solution.push(choice);
+            return undefined;
+        } else {
+            // uncover all columns that intersect the node's row
+            for (let rowNode of choice.node.iterateRow(true, true)) {
+                rowNode.header.uncover();
             }
-            header = header.right;
+            choice.node.header.uncover();
         }
-        return minHeader;
+        return choice;
     }
 
     /**
      * Attempts to solve the current problem
+     *
      * @returns {boolean} true if a solution was found (in this.solution) false if no solution exists
      */
     solve() {
-        this.solution = [];
         while (this.root.right !== this.root) {
-            let node = this.getMinHeader().chooseRandomRow();
-            if (node === undefined) {
-                node = this.backTrack();
+            let choice;
+
+            // try a node from the column with the least number of nodes
+            let minHeader = this.root.right;
+            for (let header of this.root.iterateRow(true)) {
+                if (header.size < minHeader.size) {
+                    minHeader = header;
+                }
             }
-            if (node === undefined) {
-                return false;
+            let node = minHeader.chooseRandomRow();
+            if (node !== undefined) {
+                // there was a node, add it to the solution and continue
+                choice = {node: node, iterator: node.iterateColumn(true)};
             } else {
-                this.pushChoice(node);
+                // no node available with current choices -> backtrack
+                while(true) {
+                    choice = this.popChoice();
+                    if (choice === undefined) {
+                        return false;
+                    }
+                    // try next node on same column (or backtrack more if none)
+                    let nextNode = choice.iterator.next();
+                    if (!nextNode.done) {
+                        choice.node = nextNode.value;
+                        break;
+                    }
+                }
             }
+            this.pushChoice(choice);
         }
         return true;
     }
+}
 
-    count_solutions() {
-        this.solution = [];
-        this.nb_solutions = 0;
-        while (true) {
-            let node = this.getMinHeader().chooseRandomRow();
-            if (node === undefined) {
-                node = this.backTrack();
-            }
-            if (node === undefined) {
-                return nb_solutions;
-            } else {
-                this.pushChoice(node);
+/**
+ * Representation of a Sudoku constraint structure
+ */
+class Sudoku extends ExactCover {
+    /**
+     * @param values the list of 81 values attributed to each cell (all cells with values other than 1-9 will be
+     * unassigned)
+     */
+    constructor(values=undefined) {
+        let matrix = [];
+        let rowLabels = [];
+        for (let y = 0; y < 9; y++) {
+            for (let x = 0; x < 9; x++) {
+                for (let v = 0; v < 9; v++) {
+                    let row = Array(324).fill(false);
+                    let a = ~~(y / 3) * 3 + ~~(x / 3);
+                    row[9 * y + x] = true;
+                    row[9 * x + v + 81] = true;
+                    row[9 * y + v + 162] = true;
+                    row[9 * a + v + 243] = true;
+                    matrix.push(row);
+                    rowLabels.push({x: x, y: y, a: a, v: v + 1});
+                }
             }
         }
-    }
-
-    checkUniqueSolution() {
-        this.solution = [];
-        let hasPreviousSolution = false;
-        while (true) {
-            let node;
-            if (this.root.right === this.root) {
-                // no more column to satisfy
-                if (hasPreviousSolution) {
-                    // multiple solutions exist
-                    return false;
-                } else {
-                    // record that a solution was found and backtrack
-                    hasPreviousSolution = true;
-                    node = this.backTrack();
-                }
-            } else {
-                // pick column with smallest size
-                let header = this.getMinHeader();
-                if (header.size === 0) {
-                    // column cannot be satisfied, backtrack
-                    node = this.backTrack();
-                } else {
-                    // pick first node in column
-                    node = header.down;
-                    header.firstChosen = node;
-                }
+        let colLabels = [];
+        for (let y = 0; y < 9; y++) {
+            for (let x = 0; x < 9; x++) {
+                colLabels.push({x: x, y: y});
             }
-            if (node === undefined) {
-                // finished running through all possibilities
-                return hasPreviousSolution;
-            } else {
-                this.pushChoice(node);
+        }
+        for (let x = 0; x < 9; x++) {
+            for (let v = 0; v < 9; v++) {
+                colLabels.push({x: x, v: v + 1});
+            }
+        }
+        for (let y = 0; y < 9; y++) {
+            for (let v = 0; v < 9; v++) {
+                colLabels.push({y: y, v: v + 1});
+            }
+        }
+        for (let a = 0; a < 9; a++) {
+            for (let v = 0; v < 9; v++) {
+                colLabels.push({a: a, v: v + 1});
+            }
+        }
+        super(matrix, rowLabels, colLabels);
+        if (values !== undefined) {
+            for (let i = 0; i < values.length; i++) {
+                if (1 <= values[i] && values[i] <= 9) {
+                    this.pushChoice({node: this.rows[9 * i + values[i] - 1]});
+                }
             }
         }
     }
@@ -395,9 +347,9 @@ class Sudoku {
      */
     getValues() {
         let values = Array(81);
-        for (let node of this.solution) {
-            let label = node.getLabel();
-            values[9 * label.row + label.col] = label.value;
+        for (let choice of this.solution) {
+            let label = choice.node.rowLabel;
+            values[9 * label.y + label.x] = label.v;
         }
         return values;
     }
@@ -412,5 +364,37 @@ onmessage = function(event) {
     }
 };
 
-// let s1 = new Sudoku([8, 2, undefined, undefined, undefined, undefined, 4, undefined, undefined, undefined, 6, 9, undefined, 8, undefined, undefined, undefined, undefined, undefined, undefined, undefined, 3, undefined, undefined, undefined, 1, undefined, undefined, undefined, undefined, undefined, undefined, 9, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, 1, 6, 4, undefined, undefined, undefined, 8, undefined, 7, undefined, 5, undefined, undefined, undefined, undefined, undefined, 4, 1, undefined, undefined, undefined, undefined, 4, 9, 2, undefined, undefined, 3, undefined, undefined, undefined, undefined, undefined, 6, undefined, undefined, 8, undefined, undefined, undefined]);
-// let s2 = new Sudoku([1, 2, 3, 4, 5, 6, 7, 8, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, 2, 3, 4, 5, 6, 7, 8, 1, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined])
+// Examples
+
+// let s1 = new Sudoku([
+//     8, 2, 0, 0, 0, 0, 4, 0, 0,
+//     0, 6, 9, 0, 8, 0, 0, 0, 0,
+//     0, 0, 0, 3, 0, 0, 0, 1, 0,
+//     0, 0, 0, 0, 0, 9, 0, 0, 0,
+//     0, 0, 0, 0, 0, 1, 6, 4, 0,
+//     0, 0, 8, 0, 7, 0, 5, 0, 0,
+//     0, 0, 0, 4, 1, 0, 0, 0, 0,
+//     4, 9, 2, 0, 0, 3, 0, 0, 0,
+//     0, 0, 6, 0, 0, 8, 0, 0, 0]);
+
+// let s2 = new Sudoku([
+//     1, 2, 3, 4, 5, 6, 7, 8, 0,
+//     0, 0, 0, 0, 0, 0, 0, 0, 0,
+//     0, 0, 0, 0, 0, 0, 0, 0, 0,
+//     2, 3, 4, 5, 6, 7, 8, 1, 0,
+//     0, 0, 0, 0, 0, 0, 0, 0, 0,
+//     0, 0, 0, 0, 0, 0, 0, 0, 0,
+//     0, 0, 0, 0, 0, 0, 0, 0, 0,
+//     0, 0, 0, 0, 0, 0, 0, 0, 0,
+//     0, 0, 0, 0, 0, 0, 0, 0, 0])
+
+// let e = new ExactCover([
+//     [true, false, false, false, true, false, false, false, true, false, false, false],
+//     [true, false, false, false, false, false, true, false, false, false, true, false],
+//     [false, true, false, false, false, true, false, false, true, false, false, false],
+//     [false, true, false, false, false, false, false, true, false, false, true, false],
+//     [false, false, true, false, true, false, false, false, false, true, false, false],
+//     [false, false, true, false, false, false, true, false, false, false, false, true],
+//     [false, false, false, true, false, true, false, false, false, true, false, false],
+//     [false, false, false, true, false, false, false, true, false, false, false, true]
+// ]);
