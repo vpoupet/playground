@@ -15,10 +15,11 @@ html
         li Move selection with arrow keys
         li Type a digit (1-9) to set the value of the selected cell
         li Erase the selected cell's value with Backspace
-        li The Clear button clears the value of all non-locked cells
-        li The Lock button locks all cells with a value
-        li The Unlock button unlocks all cells
-        li The Solve button searches for a solution of the current grid
+        li The <em>Generate</em> button clears the grid and generates a new proper Sudoku (single solution, all hints required)
+        li The <em>Clear</em> button clears the value of all non-locked cells
+        li The <em>Lock</em> button locks all cells with a value
+        li The <em>Unlock</em> button unlocks all cells
+        li The <em>Solve</em> button searches for a solution of the current grid
           ul
             li Cell values cannot be changed while solver is running
             li Solver can be interrupted by clicking on the same button (labeled "Stop" during computation)
@@ -28,3 +29,4 @@ html
     script(src="react-0.14.3.js")
     script(src="react-dom-0.14.3.js")
     script(src="app.js")
+    //script(src="solver.js")

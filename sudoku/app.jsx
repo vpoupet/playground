@@ -51,11 +51,41 @@ class Sudoku extends React.Component {
         } else {
             // start a new computation with a webworker
             let worker = new Worker('./solver.js');
-            worker.postMessage(this.state.cells.map(c => c.value));
+            worker.postMessage({
+                command: "solve",
+                values: this.state.cells.map(c => c.value)});
 
             worker.onmessage = event => {
                 if (event.data !== undefined) {
                     event.data.map((v, i) => this.state.cells[i].value = v);
+                }
+                this.state.worker.terminate();
+                this.setState({ worker: undefined })
+            };
+            this.setState({ worker: worker });
+        }
+    };
+
+    /**
+     * Solve the grid with current values
+     * This method calls a Webworker in the background to run the search algorithm
+     */
+    generate() {
+        if (this.state.worker !== undefined) {
+            // stop current computation
+            this.state.worker.terminate();
+            this.setState({ worker: undefined });
+        } else {
+            // start a new computation with a webworker
+            let worker = new Worker('./solver.js');
+            worker.postMessage({command: "generate"});
+
+            worker.onmessage = event => {
+                if (event.data !== undefined) {
+                    event.data.map((v, i) => this.state.cells[i].value = v);
+                }
+                for (let cell of this.state.cells) {
+                    cell.isLocked = cell.value !== undefined;
                 }
                 this.state.worker.terminate();
                 this.setState({ worker: undefined })
@@ -168,6 +198,7 @@ class Sudoku extends React.Component {
                 )}
             </div>
             <div id="buttons">
+                <button onClick={() => this.generate()}>{this.state.worker === undefined ? "Generate" : "Stop"}</button>
                 <button onClick={() => this.clear()}>Clear</button>
                 <button onClick={() => this.solve()}>{this.state.worker === undefined ? "Solve" : "Stop"}</button>
                 <button onClick={() => this.lock()}>Lock</button>

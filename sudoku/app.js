@@ -51,11 +51,41 @@ class Sudoku extends React.Component {
         } else {
             // start a new computation with a webworker
             let worker = new Worker('./solver.js');
-            worker.postMessage(this.state.cells.map(c => c.value));
+            worker.postMessage({
+                command: "solve",
+                values: this.state.cells.map(c => c.value) });
 
             worker.onmessage = event => {
                 if (event.data !== undefined) {
                     event.data.map((v, i) => this.state.cells[i].value = v);
+                }
+                this.state.worker.terminate();
+                this.setState({ worker: undefined });
+            };
+            this.setState({ worker: worker });
+        }
+    }
+
+    /**
+     * Solve the grid with current values
+     * This method calls a Webworker in the background to run the search algorithm
+     */
+    generate() {
+        if (this.state.worker !== undefined) {
+            // stop current computation
+            this.state.worker.terminate();
+            this.setState({ worker: undefined });
+        } else {
+            // start a new computation with a webworker
+            let worker = new Worker('./solver.js');
+            worker.postMessage({ command: "generate" });
+
+            worker.onmessage = event => {
+                if (event.data !== undefined) {
+                    event.data.map((v, i) => this.state.cells[i].value = v);
+                }
+                for (let cell of this.state.cells) {
+                    cell.isLocked = cell.value !== undefined;
                 }
                 this.state.worker.terminate();
                 this.setState({ worker: undefined });
@@ -150,11 +180,11 @@ class Sudoku extends React.Component {
         const hasFocus = this.state.focusIndex !== undefined;
 
         return React.createElement(
-            "div",
+            'div',
             null,
             React.createElement(
-                "div",
-                { className: "grid", tabIndex: "0", onKeyDown: this.handleKeyDown.bind(this) },
+                'div',
+                { className: 'grid', tabIndex: '0', onKeyDown: this.handleKeyDown.bind(this) },
                 this.state.cells.map((c, i) => React.createElement(Cell, {
                     key: i,
                     index: i,
@@ -166,27 +196,32 @@ class Sudoku extends React.Component {
                 }))
             ),
             React.createElement(
-                "div",
-                { id: "buttons" },
+                'div',
+                { id: 'buttons' },
                 React.createElement(
-                    "button",
-                    { onClick: () => this.clear() },
-                    "Clear"
+                    'button',
+                    { onClick: () => this.generate() },
+                    this.state.worker === undefined ? "Generate" : "Stop"
                 ),
                 React.createElement(
-                    "button",
+                    'button',
+                    { onClick: () => this.clear() },
+                    'Clear'
+                ),
+                React.createElement(
+                    'button',
                     { onClick: () => this.solve() },
                     this.state.worker === undefined ? "Solve" : "Stop"
                 ),
                 React.createElement(
-                    "button",
+                    'button',
                     { onClick: () => this.lock() },
-                    "Lock"
+                    'Lock'
                 ),
                 React.createElement(
-                    "button",
+                    'button',
                     { onClick: () => this.unlock() },
-                    "Unlock"
+                    'Unlock'
                 )
             )
         );
@@ -203,7 +238,7 @@ class Cell extends React.Component {
         if (this.props.isLocked) classes.push("locked");
         if (this.props.isHighlighted) classes.push("highlighted");
         return React.createElement(
-            "div",
+            'div',
             { className: classes.join(' '), onClick: this.props.onClick },
             this.props.value
         );

@@ -1,4 +1,17 @@
 /**
+ * Shuffle an array in place
+ * (Fisher-Yates shuffle)
+ */
+Array.prototype.shuffle = function() {
+    for (let i = 0; i < this.length - 1; i++) {
+        let index = ~~(Math.random() * (this.length - i)) + i;
+        let x = this[i];
+        this[i] = this[index];
+        this[index] = x;
+    }
+};
+
+/**
  * A node in a grid of doubly-linked lists
  */
 class Node {
@@ -250,6 +263,15 @@ class ExactCover {
      * @returns {boolean} true if a solution was found (in this.solution) false if no solution exists
      */
     solve() {
+        if (this.root.right === this.root) {
+            // if the problem is already solved, backtrack and find another solution
+            let choice = this.backtrack();
+            if (choice === undefined) {
+                return false;
+            }
+            this.pushChoice(choice);
+        }
+
         while (this.root.right !== this.root) {
             let choice;
 
@@ -266,22 +288,38 @@ class ExactCover {
                 choice = {node: node, iterator: node.iterateColumn(true)};
             } else {
                 // no node available with current choices -> backtrack
-                while(true) {
-                    choice = this.popChoice();
-                    if (choice === undefined) {
-                        return false;
-                    }
-                    // try next node on same column (or backtrack more if none)
-                    let nextNode = choice.iterator.next();
-                    if (!nextNode.done) {
-                        choice.node = nextNode.value;
-                        break;
-                    }
+                choice = this.backtrack();
+                if (choice === undefined) {
+                    return false;
                 }
             }
             this.pushChoice(choice);
         }
         return true;
+    }
+
+    backtrack() {
+        let choice;
+        while(true) {
+            choice = this.popChoice();
+            if (choice === undefined) {
+                return undefined;
+            }
+            // try next node on same column (or backtrack more if none)
+            let nextNode = choice.iterator.next();
+            if (!nextNode.done) {
+                choice.node = nextNode.value;
+                return choice;
+            }
+        }
+    }
+
+    /**
+     * @returns {boolean} true if the Sudoku has a unique solution, false if it either have no solution or more than
+     * one solution.
+     */
+    hasSingleSolution() {
+        return this.solve() && !this.solve();
     }
 }
 
@@ -294,44 +332,46 @@ class Sudoku extends ExactCover {
      * unassigned)
      */
     constructor(values=undefined) {
-        let matrix = [];
-        let rowLabels = [];
-        for (let y = 0; y < 9; y++) {
+        if (Sudoku.matrix === undefined) {
+            Sudoku.matrix = [];
+            Sudoku.rowLabels = [];
+            for (let y = 0; y < 9; y++) {
+                for (let x = 0; x < 9; x++) {
+                    for (let v = 0; v < 9; v++) {
+                        let row = Array(324).fill(false);
+                        let a = ~~(y / 3) * 3 + ~~(x / 3);
+                        row[9 * y + x] = true;
+                        row[9 * x + v + 81] = true;
+                        row[9 * y + v + 162] = true;
+                        row[9 * a + v + 243] = true;
+                        Sudoku.matrix.push(row);
+                        Sudoku.rowLabels.push({x: x, y: y, a: a, v: v + 1});
+                    }
+                }
+            }
+            Sudoku.colLabels = [];
+            for (let y = 0; y < 9; y++) {
+                for (let x = 0; x < 9; x++) {
+                    Sudoku.colLabels.push({x: x, y: y});
+                }
+            }
             for (let x = 0; x < 9; x++) {
                 for (let v = 0; v < 9; v++) {
-                    let row = Array(324).fill(false);
-                    let a = ~~(y / 3) * 3 + ~~(x / 3);
-                    row[9 * y + x] = true;
-                    row[9 * x + v + 81] = true;
-                    row[9 * y + v + 162] = true;
-                    row[9 * a + v + 243] = true;
-                    matrix.push(row);
-                    rowLabels.push({x: x, y: y, a: a, v: v + 1});
+                    Sudoku.colLabels.push({x: x, v: v + 1});
+                }
+            }
+            for (let y = 0; y < 9; y++) {
+                for (let v = 0; v < 9; v++) {
+                    Sudoku.colLabels.push({y: y, v: v + 1});
+                }
+            }
+            for (let a = 0; a < 9; a++) {
+                for (let v = 0; v < 9; v++) {
+                    Sudoku.colLabels.push({a: a, v: v + 1});
                 }
             }
         }
-        let colLabels = [];
-        for (let y = 0; y < 9; y++) {
-            for (let x = 0; x < 9; x++) {
-                colLabels.push({x: x, y: y});
-            }
-        }
-        for (let x = 0; x < 9; x++) {
-            for (let v = 0; v < 9; v++) {
-                colLabels.push({x: x, v: v + 1});
-            }
-        }
-        for (let y = 0; y < 9; y++) {
-            for (let v = 0; v < 9; v++) {
-                colLabels.push({y: y, v: v + 1});
-            }
-        }
-        for (let a = 0; a < 9; a++) {
-            for (let v = 0; v < 9; v++) {
-                colLabels.push({a: a, v: v + 1});
-            }
-        }
-        super(matrix, rowLabels, colLabels);
+        super(Sudoku.matrix, Sudoku.rowLabels, Sudoku.colLabels);
         if (values !== undefined) {
             for (let i = 0; i < values.length; i++) {
                 if (1 <= values[i] && values[i] <= 9) {
@@ -353,14 +393,34 @@ class Sudoku extends ExactCover {
         }
         return values;
     }
+
+    static generate() {
+        let s = new Sudoku();
+        s.solve();
+        let hints = s.getValues();
+        let indexes = Array(81).fill(0).map((v, i) => i);
+        indexes.shuffle();
+        for (let i of indexes) {
+            let h = hints[i];
+            hints[i] = undefined;
+            if (!new Sudoku(hints).hasSingleSolution()) {
+                hints[i] = h;
+            }
+        }
+        return hints;
+    }
 }
 
 onmessage = function(event) {
-    let s = new Sudoku(event.data);
-    if (s.solve()) {
-        postMessage(s.getValues());
-    } else {
-        postMessage(undefined);
+    if (event.data.command === "solve") {
+        let s = new Sudoku(event.data.values);
+        if (s.solve()) {
+            postMessage(s.getValues());
+        } else {
+            postMessage(undefined);
+        }
+    } else if (event.data.command === "generate") {
+        postMessage(Sudoku.generate());
     }
 };
 
@@ -376,7 +436,7 @@ onmessage = function(event) {
 //     0, 0, 0, 4, 1, 0, 0, 0, 0,
 //     4, 9, 2, 0, 0, 3, 0, 0, 0,
 //     0, 0, 6, 0, 0, 8, 0, 0, 0]);
-
+//
 // let s2 = new Sudoku([
 //     1, 2, 3, 4, 5, 6, 7, 8, 0,
 //     0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -386,8 +446,8 @@ onmessage = function(event) {
 //     0, 0, 0, 0, 0, 0, 0, 0, 0,
 //     0, 0, 0, 0, 0, 0, 0, 0, 0,
 //     0, 0, 0, 0, 0, 0, 0, 0, 0,
-//     0, 0, 0, 0, 0, 0, 0, 0, 0])
-
+//     0, 0, 0, 0, 0, 0, 0, 0, 0]);
+//
 // let e = new ExactCover([
 //     [true, false, false, false, true, false, false, false, true, false, false, false],
 //     [true, false, false, false, false, false, true, false, false, false, true, false],
