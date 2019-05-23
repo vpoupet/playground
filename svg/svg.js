@@ -419,6 +419,29 @@ class Circle extends Tag {
 }
 
 /**
+ * Representzation of the <line> tag.
+ */
+class Line extends Tag {
+    /**
+     * @param x1 {number} x-coordinate of the first point
+     * @param y1 {number} y-coordinate of the first point
+     * @param x2 {number} x-coordinate of the second point
+     * @param y2 {number} y-coordinate of the second point
+     */
+    constructor(x1, y1, x2, y2) {
+        super("line");
+        this.x1 = x1;
+        this.y1 = y1;
+        this.x2 = x2;
+        this.y2 = y2;
+    }
+
+    parameters_string(data) {
+        return `x1="${this.x1}" y1="${this.y1}" x2="${this.x2}" y2="${this.y2}"`;
+    }
+}
+
+/**
  * Representation of the <polyline> and <polygon> tags.
  */
 class Polyline extends Tag {

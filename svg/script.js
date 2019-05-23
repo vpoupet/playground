@@ -204,6 +204,71 @@ class Icosahedron {
     }
 }
 
+function clamp(x, min, max) {
+    if (x < min) { return min; }
+    else if (x > max) {return max; }
+    return x;
+}
+
+class Ellipse {
+    constructor(container) {
+        let radius = 300;
+        let nb_cords = 200;
+        let fx = 0.8 * radius;
+        let fy = 0;
+        this.container = container;
+        this.time = 0;
+
+        this.img = new SVGNode(new SVG(3 * radius, 3 * radius));
+        let ref = new SVGNode(new Group(), new Style().translate(1.5 * radius, 1.5 * radius));
+        let main_circle = new Circle(0, 0, radius);
+        let centers = new SVGNode(new Group());
+        this.cords = new SVGNode(new Group(), new Style({'stroke-width': 1, "stroke": "green"}));
+        this.img.add(ref);
+        ref.add(this.cords);
+        ref.add(centers);
+        ref.add(new Circle(fx, fy, 5), new Style({"fill": "red"}));
+        ref.add(main_circle, new Style({"stroke-width": 4, "stroke": "black", "fill": "none"}));
+
+        for (let i = 0; i < nb_cords; i++) {
+            let angle = 2 * i * Math.PI / nb_cords;
+            let x = radius * Math.cos(angle);
+            let y = radius * Math.sin(angle);
+            let rx = (fx + x) / 2;
+            let ry = (fy + y) / 2;
+            this.cords.add(new Line(fx, fy, x, y), new Style().rotate(0, rx, ry));
+            centers.add(new Circle(rx, ry, 2), new Style({"fill": "blue"}));
+        }
+    }
+
+    set_angle(angle) {
+        for (let node of this.cords.content) {
+            node.style.transform[0].angle = angle;
+        }
+        this.container.innerHTML = this.img.svg();
+    }
+
+    update() {
+        let total_time = 5;
+        this.time += .01;
+        this.time %= total_time;
+        let nb_cords = this.cords.content.length;
+        for (let i = 0; i < nb_cords; i++) {
+            let angle;
+            if (this.time <= total_time / 2) {
+                this.cords.content[i].style.transform[0].angle = clamp(90 * (this.time - i / nb_cords), 0, 90);
+            } else {
+                this.cords.content[i].style.transform[0].angle = clamp(90 + 90 * (this.time - total_time / 2 - i / nb_cords), 90, 180);
+            }
+        }
+
+        this.container.innerHTML = this.img.svg();
+        window.requestAnimationFrame(this.update.bind(this));
+    }
+}
+
 window.onload = () => {
-    new Icosahedron(document.getElementById("svg-container")).update();
+    // new Icosahedron(document.getElementById("svg-container")).update();
+    let ellipse = new Ellipse(document.getElementById("svg-container"));
+    ellipse.update();
 };

@@ -1,18 +1,15 @@
-class Sudoku extends React.Component {
+let pressedKeys = new Set();
+
+class SudokuGrid extends React.Component {
     constructor(props) {
         super(props);
-        let cells = [];
-        for (let i = 0; i < 81; i++) {
-            cells.push({
-                value: undefined
-            });
-        }
-
         this.state = {
-            cells: cells,
-            focusIndex: undefined,
+            cellValues: Array(81).fill(undefined),
+            cellLocks: Array(81).fill(false),
+            shouldClearSmall: false,
             worker: undefined
         };
+        this.cells = [];
     }
 
     isIdle() {
@@ -23,20 +20,18 @@ class Sudoku extends React.Component {
      * Mark all cells that have a value as locked
      */
     lock() {
-        for (let cell of this.state.cells) {
-            cell.isLocked = cell.value !== undefined;
-        }
-        this.forceUpdate();
+        this.setState({
+            cellLocks: this.state.cellValues.map(v => v !== undefined)
+        });
     }
 
     /**
      * Mark all cells as unlocked
      */
     unlock() {
-        for (let cell of this.state.cells) {
-            cell.isLocked = false;
-        }
-        this.forceUpdate();
+        this.setState({
+            cellLocks: Array(81).fill(false)
+        });
     }
 
     /**
@@ -44,25 +39,27 @@ class Sudoku extends React.Component {
      * This method calls a Webworker in the background to run the search algorithm
      */
     solve() {
-        if (this.state.worker !== undefined) {
-            // stop current computation
-            this.state.worker.terminate();
-            this.setState({ worker: undefined });
-        } else {
+        if (this.isIdle()) {
             // start a new computation with a webworker
             let worker = new Worker('./solver.js');
             worker.postMessage({
                 command: "solve",
-                values: this.state.cells.map(c => c.value) });
+                values: this.state.cellValues });
 
             worker.onmessage = event => {
                 if (event.data !== undefined) {
-                    event.data.map((v, i) => this.state.cells[i].value = v);
+                    this.setState({
+                        cellValues: event.data
+                    });
                 }
                 this.state.worker.terminate();
                 this.setState({ worker: undefined });
             };
             this.setState({ worker: worker });
+        } else {
+            // stop current computation
+            this.state.worker.terminate();
+            this.setState({ worker: undefined });
         }
     }
 
@@ -71,26 +68,28 @@ class Sudoku extends React.Component {
      * This method calls a Webworker in the background to run the search algorithm
      */
     generate() {
-        if (this.state.worker !== undefined) {
-            // stop current computation
-            this.state.worker.terminate();
-            this.setState({ worker: undefined });
-        } else {
+        if (this.isIdle()) {
             // start a new computation with a webworker
             let worker = new Worker('./solver.js');
-            worker.postMessage({ command: "generate" });
+            worker.postMessage({
+                command: "generate" });
 
             worker.onmessage = event => {
                 if (event.data !== undefined) {
-                    event.data.map((v, i) => this.state.cells[i].value = v);
-                }
-                for (let cell of this.state.cells) {
-                    cell.isLocked = cell.value !== undefined;
+                    this.setState({
+                        cellValues: event.data,
+                        cellLocks: event.data.map(v => v !== undefined)
+                    });
                 }
                 this.state.worker.terminate();
                 this.setState({ worker: undefined });
             };
+
             this.setState({ worker: worker });
+        } else {
+            // stop current computation
+            this.state.worker.terminate();
+            this.setState({ worker: undefined });
         }
     }
 
@@ -99,100 +98,31 @@ class Sudoku extends React.Component {
      */
     clear() {
         if (this.isIdle()) {
-            for (let cell of this.state.cells) {
-                if (!cell.isLocked) cell.value = undefined;
-            }
-            this.forceUpdate();
+            this.setState({
+                cellValues: this.state.cellValues.map((v, i) => this.state.cellLocks[i] ? v : undefined)
+            });
         }
-    }
-
-    /**
-     * React to a click on a cell
-     * (toggle focus on the cell)
-     *
-     * @param {number} index the index of the clicked cell
-     */
-    clickCell(index) {
-        this.setState({
-            focusIndex: this.state.focusIndex === index ? undefined : index
-        });
-    }
-
-    /**
-     * React to keyboard events:
-     * - A number (1-9) sets the value of the focused cell
-     * - Backspace removes the value of the focused cell
-     * - Arrow keys move focus to neighbor cells
-     * - Escape removes the focus
-     *
-     * @param {KeyboardEvent} event the keyboard event
-     */
-    handleKeyDown(event) {
-        event.preventDefault();
-        const focusIndex = this.state.focusIndex;
-        if (focusIndex !== undefined) {
-            const focusCell = this.state.cells[focusIndex];
-            let newFocusIndex = undefined;
-            switch (event.key) {
-                case "1":
-                case "2":
-                case "3":
-                case "4":
-                case "5":
-                case "6":
-                case "7":
-                case "8":
-                case "9":
-                    if (this.isIdle() && !focusCell.isLocked) {
-                        focusCell.value = Number(event.key);
-                        this.forceUpdate();
-                    }
-                    break;
-                case "Backspace":
-                    if (this.isIdle() && !focusCell.isLocked) {
-                        focusCell.value = undefined;
-                        this.forceUpdate();
-                    }
-                    break;
-                case "ArrowUp":
-                    newFocusIndex = focusIndex - 9;
-                    break;
-                case "ArrowDown":
-                    newFocusIndex = focusIndex + 9;
-                    break;
-                case "ArrowLeft":
-                    newFocusIndex = focusIndex - 1;
-                    break;
-                case "ArrowRight":
-                    newFocusIndex = focusIndex + 1;
-                    break;
-                case "Escape":
-                    this.setState({ focusIndex: undefined });
-                    break;
-            }
-            if (0 <= newFocusIndex && newFocusIndex < 81) {
-                this.setState({ focusIndex: newFocusIndex });
-            }
+        for (let cell of this.cells) {
+            cell.setState({
+                small: Array(9).fill(false)
+            });
         }
     }
 
     render() {
-        const hasFocus = this.state.focusIndex !== undefined;
-
         return React.createElement(
             'div',
             null,
             React.createElement(
                 'div',
-                { className: 'grid', tabIndex: '0', onKeyDown: this.handleKeyDown.bind(this) },
-                this.state.cells.map((c, i) => React.createElement(Cell, {
+                { className: 'grid', tabIndex: '0' },
+                this.state.cellValues.map((v, i) => React.createElement(Cell, {
                     key: i,
                     index: i,
-                    value: c.value,
-                    isFocused: i === this.state.focusIndex,
-                    isHighlighted: hasFocus && (i % 9 === this.state.focusIndex % 9 || ~~(i / 9) === ~~(this.state.focusIndex / 9)),
-                    isLocked: c.isLocked,
-                    onClick: () => this.clickCell(i)
+                    value: v,
+                    isLocked: this.state.cellLocks[i],
+                    setValue: v => this.setCellValue(i, v),
+                    ref: input => this.cells[i] = input
                 }))
             ),
             React.createElement(
@@ -201,7 +131,7 @@ class Sudoku extends React.Component {
                 React.createElement(
                     'button',
                     { onClick: () => this.generate() },
-                    this.state.worker === undefined ? "Generate" : "Stop"
+                    this.isIdle() ? "Generate" : "Stop"
                 ),
                 React.createElement(
                     'button',
@@ -211,7 +141,7 @@ class Sudoku extends React.Component {
                 React.createElement(
                     'button',
                     { onClick: () => this.solve() },
-                    this.state.worker === undefined ? "Solve" : "Stop"
+                    this.isIdle() ? "Solve" : "Stop"
                 ),
                 React.createElement(
                     'button',
@@ -226,25 +156,72 @@ class Sudoku extends React.Component {
             )
         );
     }
+
+    setCellValue(index, value) {
+        if (!this.state.cellLocks[index]) {
+            let values = [...this.state.cellValues];
+            values[index] = value;
+            this.setState({ cellValues: values });
+        }
+    }
 }
 
 class Cell extends React.Component {
+    constructor(props) {
+        super(props);
+        this.state = {
+            small: Array(9).fill(false)
+        };
+    }
+
     render() {
         let row = ~~(this.props.index / 9);
         let col = this.props.index % 9;
         let area = 3 * ~~(row / 3) + ~~(col / 3);
         let classes = ['cell', `R${row}`, `C${col}`, `A${area}`];
-        if (this.props.isFocused) classes.push("focused");
         if (this.props.isLocked) classes.push("locked");
-        if (this.props.isHighlighted) classes.push("highlighted");
+        let smallNotes = [];
+        if (this.props.value === undefined) {
+            for (let i = 1; i <= 9; i++) {
+                smallNotes.push(React.createElement(
+                    'div',
+                    { className: 'small', onClick: () => this.onClickSmall(i), key: i },
+                    this.state.small[i] ? i : ""
+                ));
+            }
+        }
         return React.createElement(
             'div',
-            { className: classes.join(' '), onClick: this.props.onClick },
-            this.props.value
+            { className: classes.join(' ') },
+            React.createElement(
+                'div',
+                { className: 'big', onClick: () => this.props.setValue(undefined) },
+                this.props.value
+            ),
+            smallNotes
         );
+    }
+
+    onClickSmall(value) {
+        if (!this.props.isLocked) {
+            if (pressedKeys.has("Shift")) {
+                this.props.setValue(value);
+            } else {
+                let small = Array.from(this.state.small);
+                small[value] = !small[value];
+                this.setState({ small: small });
+            }
+        }
     }
 }
 
-ReactDOM.render(React.createElement(Sudoku, null), document.getElementById('app'));
+document.addEventListener("keydown", event => {
+    pressedKeys.add(event.key);
+});
+document.addEventListener("keyup", event => {
+    pressedKeys.delete(event.key);
+});
+
+ReactDOM.render(React.createElement(SudokuGrid, null), document.getElementById('app'));
 
 //# sourceMappingURL=app.js.map
