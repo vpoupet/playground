@@ -191,10 +191,10 @@ class Cell extends React.Component {
                         className: 'small',
                         onMouseDown: e => this.onPointerDown(e, i),
                         onMouseLeave: () => this.onPointerLeave(),
-                        onMouseUp: e => this.onPointerUp(e, i),
-                        onTouchStart: e => this.onPointerDown(e, i),
-                        onTouchEnd: e => this.onPointerUp(e, i),
-                        key: i },
+                        onMouseUp: e => this.onPointerUp(e, i)
+                        // onTouchStart={e => this.onPointerDown(e, i)}
+                        // onTouchEnd={e => this.onPointerUp(e, i)}
+                        , key: i },
                     this.state.small[i] ? i : ""
                 ));
             }

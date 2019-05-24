@@ -169,8 +169,8 @@ class Cell extends React.Component {
                         onMouseDown={e => this.onPointerDown(e, i)}
                         onMouseLeave={() => this.onPointerLeave()}
                         onMouseUp={e => this.onPointerUp(e, i)}
-                        onTouchStart={e => this.onPointerDown(e, i)}
-                        onTouchEnd={e => this.onPointerUp(e, i)}
+                        // onTouchStart={e => this.onPointerDown(e, i)}
+                        // onTouchEnd={e => this.onPointerUp(e, i)}
                         key={i}>
                         {this.state.small[i] ? i : ""}
                     </div>);
