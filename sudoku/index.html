@@ -5,6 +5,8 @@
     <title>Sudoku</title>
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css?family=Inconsolata" rel="stylesheet">
+    <script src="react-0.14.3.js"></script>
+    <script src="react-dom-0.14.3.js"></script>
   </head>
   <body>
     <h1>Sudoku</h1>
@@ -12,10 +14,12 @@
     <div id="info">
       <h2>Instructions</h2>
       <ul>
-        <li>Click on a cell to toggle selection</li>
-        <li>Move selection with arrow keys</li>
-        <li>Type a digit (1-9) to set the value of the selected cell</li>
-        <li>Erase the selected cell's value with Backspace</li>
+        <li>Interaction with cells is done by clicking on one of the 3x3 subcells each representing a value from 1 to 9:
+          <ul>
+            <li>Long-click on a cell's subcell to place a value in the cell</li>
+            <li>Short-click on a cell's subcell to toggle a pencil annotation</li>
+          </ul>
+        </li>
         <li>The <em>Generate</em> button clears the grid and generates a new proper Sudoku (single solution, all hints required)</li>
         <li>The <em>Clear</em> button clears the value of all non-locked cells</li>
         <li>The <em>Lock</em> button locks all cells with a value</li>
@@ -30,8 +34,6 @@
         </li>
       </ul>
     </div>
-    <script src="react-0.14.3.js"></script>
-    <script src="react-dom-0.14.3.js"></script>
     <script src="app.js"></script>
     <!--script(src="solver.js")-->
   </body>

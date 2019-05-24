@@ -172,6 +172,8 @@ class Cell extends React.Component {
         this.state = {
             small: Array(9).fill(false)
         };
+        this.pointerTimer = undefined;
+        this.pointerValue = undefined;
     }
 
     render() {
@@ -185,7 +187,14 @@ class Cell extends React.Component {
             for (let i = 1; i <= 9; i++) {
                 smallNotes.push(React.createElement(
                     'div',
-                    { className: 'small', onClick: () => this.onClickSmall(i), key: i },
+                    {
+                        className: 'small',
+                        onMouseDown: e => this.onPointerDown(e, i),
+                        onMouseLeave: () => this.onPointerLeave(),
+                        onMouseUp: e => this.onPointerUp(e, i),
+                        onTouchStart: e => this.onPointerDown(e, i),
+                        onTouchEnd: e => this.onPointerUp(e, i),
+                        key: i },
                     this.state.small[i] ? i : ""
                 ));
             }
@@ -195,25 +204,58 @@ class Cell extends React.Component {
             { className: classes.join(' ') },
             React.createElement(
                 'div',
-                { className: 'big', onClick: () => this.props.setValue(undefined) },
+                {
+                    className: 'big',
+                    onTouchStart: () => {
+                        this.props.setValue(undefined);
+                    },
+                    onMouseDown: () => {
+                        this.props.setValue(undefined);
+                    } },
                 this.props.value
             ),
             smallNotes
         );
     }
 
-    onClickSmall(value) {
+    clearPointerTimer() {
+        clearTimeout(this.pointerTimer);
+        this.pointerTimer = undefined;
+    }
+
+    onPointerDown(event, value) {
         if (!this.props.isLocked) {
-            if (pressedKeys.has("Shift")) {
-                this.props.setValue(value);
-            } else {
-                let small = Array.from(this.state.small);
-                small[value] = !small[value];
-                this.setState({ small: small });
+            if (this.pointerTimer !== undefined) {
+                this.clearPointerTimer();
             }
+            this.pointerTimer = setTimeout(() => {
+                console.log(this.pointerValue);
+                this.props.setValue(this.pointerValue);
+                this.clearPointerTimer();
+            }, 500);
+            this.pointerValue = value;
         }
     }
+
+    onPointerUp(event, value) {
+        if (this.pointerTimer !== undefined) {
+            this.clearPointerTimer();
+            let small = Array.from(this.state.small);
+            small[value] = !small[value];
+            this.setState({ small: small });
+        }
+    }
+
+    onPointerLeave(event) {
+        this.clearPointerTimer();
+    }
 }
+
+window.oncontextmenu = function (event) {
+    event.preventDefault();
+    event.stopPropagation();
+    return false;
+};
 
 document.addEventListener("keydown", event => {
     pressedKeys.add(event.key);
