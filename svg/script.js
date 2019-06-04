@@ -268,7 +268,7 @@ class Ellipse {
 }
 
 window.onload = () => {
-    // new Icosahedron(document.getElementById("svg-container")).update();
-    let ellipse = new Ellipse(document.getElementById("svg-container"));
-    ellipse.update();
+    new Icosahedron(document.getElementById("svg-container")).update();
+    // let ellipse = new Ellipse(document.getElementById("svg-container"));
+    // ellipse.update();
 };
