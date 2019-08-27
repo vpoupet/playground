@@ -6,16 +6,16 @@
   align-items: center;
 }
 #main #colors .colorpicker {
+  height: 50vw;
   display: flex;
   flex-flow: column wrap;
-  height: 640px;
   justify-content: center;
 }
 #main #colors .colorpicker svg {
-  width: 80px;
+  width: 6vw;
 }
 #main #cells {
-  width: 53.5%;
+  width: 53.5vw;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
