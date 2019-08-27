@@ -4,6 +4,10 @@ This projects is a collection of small experimentations with web technologies (m
 
 **Click on the title of each section to access the corresponding page (hosted on github.io).**
 
+## [Aquabeads](https://vpoupet.github.io/playground/recaman/index.html)
+
+Drawing board to make [Aquabeads](https://www.aquabeadsart.com) patterns (can be saved as SVG)
+
 ## [Sudoku](https://vpoupet.github.io/playground/sudoku/index.html)
 
 A *Sudoku* solver. Main page is in React, solver runs in a *web worker* using

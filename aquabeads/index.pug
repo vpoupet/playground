@@ -1,0 +1,25 @@
+doctype html
+html
+  head
+    meta(charset="utf-8")
+    link(rel="stylesheet" type="text/css" href="index.css")
+  body
+    #main
+      #colors
+      #cells
+        #buttons
+          span
+            input(type="checkbox" id="stylus" onchange="stylusOnly=this.checked")
+            |  Stylus only
+          button(id="saveButton") Save
+          button(id="clearButton") Clear
+  h1 Instructions
+  ul
+    li Select bead type on the left
+    li Draw on the grid with mouse or touch (if "stylus only" is checked, only pressure-enabled touches are registered)
+    li "Save" button opens the grid as an SVG image so it can be manually saved in the browser
+    li "Clear" button resets all cells in the grid
+    li Use directional arrows to move all the beads on the grid (to re-center)
+  script(src="svg.js")
+  script(src="index.js")
+
