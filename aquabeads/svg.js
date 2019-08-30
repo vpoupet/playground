@@ -324,7 +324,7 @@ class SVG {
     /**
      * Creates and returns an SVG Polyline (open or closed) element (<polyline> or <polygon>)
      *
-     * @param {{x: number, y: number}[]} points list of points of the line
+     * @param {Point[]} points list of points of the line
      * @param {boolean} is_closed whether the line is closed (polygon) or not (polyline)
      * @returns {SVGElement}
      * @constructor
@@ -336,7 +336,7 @@ class SVG {
         } else {
             e = SVG.new('polyline');
         }
-        e.setAttribute("points", points.map(p => `${p[0]},${p[1]}`).join(' '));
+        e.setAttribute("points", points.map(p => `${p.x},${p.y}`).join(' '));
         return e;
     }
 
@@ -351,7 +351,7 @@ class SVG {
     static NGon(nbPoints, r=1) {
         let points = [];
         for (let i = 0; i < nbPoints; i++) {
-            points.push([r * Math.cos(2 * i * Math.PI / nbPoints), r * Math.sin(2 * i * Math.PI / nbPoints)]);
+            points.push(new Point(r * Math.cos(2 * i * Math.PI / nbPoints), r * Math.sin(2 * i * Math.PI / nbPoints)));
         }
         return SVG.Polyline(points, true);
     }
@@ -380,5 +380,79 @@ class SVG {
             e.appendChild(SVG.Line(0, i * cellHeight, sizeX * cellWidth, i * cellHeight));
         }
         return e;
+    }
+}
+
+
+class Point {
+    constructor(x, y) {
+        this.x = x;
+        this.y = y;
+    }
+
+    scale(s) {
+        return new Point(this.x * s, this.y * s);
+    }
+
+    add(other) {
+        return new Point(this.x + other.x, this.y + other.y);
+    }
+
+    equals(other) {
+        return this.x === other.x && this.y === other.y;
+    }
+}
+
+
+class PointSet {
+    constructor() {
+        this.points = [];
+    }
+
+    contains(p) {
+        for (let x of this.points) {
+            if (x.equals(p)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    add(p) {
+        if (p === undefined) { return; }
+        if (!this.contains(p)) {
+            this.points.push(p);
+            return true;
+        }
+        return false;
+    }
+
+    delete(p) {
+        if (p === undefined) { return; }
+        for (let i = 0; i < this.points.length; i++) {
+            if (this.points[i].equals(p)) {
+                this.points.splice(i, 1);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    toggle(p) {
+        if (p === undefined) { return; }
+        for (let i = 0; i < this.points.length; i++) {
+            if (this.points[i].equals(p)) {
+                this.points.splice(i, 1);
+                return false;
+            }
+        }
+        this.points.push(p);
+        return true;
+    }
+
+    addSet(s) {
+        for (let x of s.points) {
+            this.add(x);
+        }
     }
 }

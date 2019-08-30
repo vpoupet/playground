@@ -1,3 +1,7 @@
+* {
+  box-sizing: border-box;
+}
+
 #main {
   display: flex;
   flex-direction: row;
@@ -6,13 +10,13 @@
   align-items: center;
 }
 #main #colors .colorpicker {
-  height: 50vw;
+  height: 33vw;
   display: flex;
   flex-flow: column wrap;
   justify-content: center;
 }
 #main #colors .colorpicker svg {
-  width: 6vw;
+  width: 4vw;
 }
 #main #cells {
   width: 53.5vw;

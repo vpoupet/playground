@@ -28,7 +28,7 @@ EMPTY_STROKE = "#DDDDDD";
  * Stroke color of beads
  * @type {string}
  */
-BEAD_STROKE = "#888888";
+BEAD_STROKE = "#434343";
 /**
  * Stroke color of selection border
  * @type {string}
@@ -42,19 +42,13 @@ SELECT_STROKE = "#333333";
 class BeadType {
     /**
      * @param {string} color
-     * @param {boolean} isGem whether the type is shaped as a gem (otherwise it is a regular "pearl" type)
      */
-    constructor(color = undefined, isGem = false) {
+    constructor(color = undefined) {
         /**
          * The color of the beads
          * @type {undefined}
          */
         this.color = color;
-        /**
-         * Whether the bead is shaped as a gem
-         * @type {boolean}
-         */
-        this.isGem = isGem;
         /**
          * Unique identifier of the type (initialized from static counter)
          * @type {string}
@@ -118,13 +112,6 @@ BeadType.default = new BeadType();
  * Representation of regular (pearl-shaped) bead types
  */
 class RoundType extends BeadType {
-    /**
-     * @param {string} color the color of the BeadType
-     */
-    constructor(color) {
-        super(color, false);
-    }
-
     makeNode() {
         return SVG.Group()
             .appendChild(
@@ -161,12 +148,7 @@ class RoundType extends BeadType {
  * Representation of gem-shaped bead types
  */
 class GemType extends BeadType {
-    /**
-     * @param {string} color the color of the BeadType
-     */
-    constructor(color) {
-        super(color, true);
-
+    makeNode() {
         // create gradient and add it to defs
         defs.appendChild(
             SVG.new("radialGradient")
@@ -186,9 +168,7 @@ class GemType extends BeadType {
                             style: `stop-color:${this.color};stop-opacity: 1`,
                         }))
         );
-    }
 
-    makeNode() {
         return SVG.Group()
             .appendChild(
                 SVG.NGon(6, .4)     // main colored hexagon
@@ -226,6 +206,63 @@ class GemType extends BeadType {
 }
 
 
+let octogon = [];
+for (let i = 0; i < 8; i++) {
+    let a = (i + .5) * Math.PI / 4;
+    octogon.push(new Point(
+        Math.cos(a),
+        Math.sin(a)));
+}
+
+class PolygonType extends BeadType {
+    makeNode() {
+        let r = .45;
+        let shadowTriangle = SVG.Polyline([
+            new Point(Math.cos(Math.PI / 8), Math.sin(Math.PI / 8)).scale(r/2),
+            new Point(Math.cos(Math.PI / 8), Math.sin(Math.PI / 8)).scale(r),
+            new Point(Math.cos(Math.PI / 8), -Math.sin(Math.PI / 8)).scale(r),
+            new Point(Math.cos(Math.PI / 8), -Math.sin(Math.PI / 8)).scale(r/2)], true)
+            .setAttributes({
+                fill: "black",
+            });
+        return SVG.Group()
+            .appendChild(
+                SVG.Polyline(octogon.map(p => p.scale(r)), true)
+                    .setAttributes({
+                        fill: this.color,
+                        stroke: "none",
+                    }))
+            .appendChild(
+                SVG.Polyline(octogon.map(p => p.scale(r / 2)), true)
+                    .setAttributes({
+                        fill: "white",
+                        fill_opacity: .2,
+                    })
+            )
+            .appendChild(shadowTriangle.setAttribute("fill-opacity", .3))
+            .appendChild(shadowTriangle.cloneNode().rotate(90).setAttribute("fill-opacity", .3))
+            .appendChild(shadowTriangle.cloneNode().rotate(180).setAttribute("fill-opacity", .1))
+            .appendChild(shadowTriangle.cloneNode().rotate(-90).setAttribute("fill-opacity", .1))
+            .appendChild(
+                SVG.Polyline(octogon.map(p => p.scale(r)), true)
+                    .setAttributes({
+                        fill: "none",
+                        stroke: BEAD_STROKE,
+                        stroke_width: .03,
+                    })
+            ).rotate(11.25);
+    }
+
+    makeContour() {
+        let r = .45;
+        return SVG.Polyline(octogon.map(p => p.scale(r)), true).setAttributes({
+            fill: "none",
+            stroke_width: .1,
+            stroke: SELECT_STROKE,
+        }).rotate(11.25);
+    }
+}
+
 /**
  * Representation of the list of buttons representing all available BeadTypes
  */
@@ -234,8 +271,8 @@ class ColorPicker {
      * @param {BeadType[]} beadTypes list of available bead types
      */
     constructor(beadTypes) {
-        beadTypes.unshift(BeadType.default);    // Add the empty cell as an available bead type
-        selectedType = beadTypes[1];
+        // beadTypes.unshift(BeadType.default);    // Add the empty cell as an available bead type
+        // selectedType = beadTypes[1];
 
         /**
          * HTMLElement representing the color picker (a <div> containing the elements representing each button)
@@ -566,20 +603,38 @@ window.onload = function () {
 
     // available bead types
     let beadTypes = [
-        new RoundType("#F2F2F2"),
-        new RoundType("#4B4948"),
-        new RoundType("#9E5E2C"),
-        new RoundType("#EBB385"),
-        new RoundType("#DF8CB1"),
         new RoundType("#C74245"),
-        new RoundType("#ECAC3C"),
         new RoundType("#FBE04C"),
-        new RoundType("#F3ED98"),
+        new RoundType("#DF8CB1"),
+        new RoundType("#ECAC3C"),
+        new RoundType("#EBB385"),
         new RoundType("#B1C940"),
         new RoundType("#4B9E51"),
         new RoundType("#60BDEB"),
         new RoundType("#225EAB"),
+        new RoundType("#F3ED98"),
+        new RoundType("#6c411d"),
+        new RoundType("#ab6630"),
         new RoundType("#754A93"),
+        new RoundType("#8a8a8a"),
+        new RoundType("#343332"),
+        new RoundType("#f0f0f0"),
+        new PolygonType("#C74245"),
+        new PolygonType("#FBE04C"),
+        new PolygonType("#DF8CB1"),
+        new PolygonType("#ECAC3C"),
+        new PolygonType("#EBB385"),
+        new PolygonType("#B1C940"),
+        new PolygonType("#4B9E51"),
+        new PolygonType("#60BDEB"),
+        new PolygonType("#225EAB"),
+        new PolygonType("#F3ED98"),
+        new PolygonType("#6c411d"),
+        new PolygonType("#ab6630"),
+        new PolygonType("#754A93"),
+        new PolygonType("#8a8a8a"),
+        new PolygonType("#343332"),
+        new PolygonType("#f0f0f0"),
         new GemType("#794C29"),
         new GemType("#DB8FAE"),
         new GemType("#D05D3C"),
@@ -588,7 +643,9 @@ window.onload = function () {
         new GemType("#7BAF52"),
         new GemType("#00AAD8"),
         new GemType("#56538C"),
+        BeadType.default,   // empty type
     ];
+    selectedType = beadTypes[0];
 
     // create and display the color picker
     let colorPicker = new ColorPicker(beadTypes);
