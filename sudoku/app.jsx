@@ -1,12 +1,112 @@
 let pressedKeys = new Set();
 
+const SudokuGridHook = props => {
+    const [cellValues, setCellValues] = React.useState(Array(81).fill(undefined));
+    const [cellLocks, setCellLocks] = React.useState(81).fill(false);
+    const [worker, setWorker] = React.useState(undefined);
+    const cells = React.useRef([]);
+
+    const isIdle = () => worker === undefined;
+    const lock = () => setCellLocks(cellValues.map(v => v !== undefined));
+    const unlock = () => setCellLocks(Array(81).fill(false));
+    const solve = () => {
+        if (isIdle()) {
+            // start a new computation with a webworker
+            let newWorker = new Worker('./solver.js');
+            newWorker.postMessage({command: "solve", values: cellValues});
+
+            newWorker.onmessage = event => {
+                if (event.data !== undefined) {
+                    setCellValues(event.data);
+                }
+                worker.terminate();
+                setWorker(undefined);
+            };
+            setWorker(newWorker);
+        } else {
+            // stop current computation
+            worker.terminate();
+            setWorker(undefined);
+        }
+    };
+
+    /**
+     * Solve the grid with current values
+     * This method calls a Webworker in the background to run the search algorithm
+     */
+    const generate = () => {
+        if (isIdle()) {
+            // start a new computation with a webworker
+            let newWorker = new Worker('./solver.js');
+            newWorker.postMessage({command: "generate"});
+
+            newWorker.onmessage = event => {
+                if (event.data !== undefined) {
+                    setCellValues(event.data);
+                    setCellLocks(event.data.map(v => v !== undefined));
+                }
+                worker.terminate();
+                setWorker(undefined);
+            };
+            setWorker(newWorker);
+        } else {
+            // stop current computation
+            worker.terminate();
+            setWorker(undefined);
+        }
+    };
+
+    /**
+     * Unset the value for all unlocked cells
+     */
+    const clear = () => {
+        if (isIdle()) {
+            setCellValues(cellValues.map((v, i) => cellLocks[i] ? v : undefined));
+        }
+        for (let cell of cells) {
+            cell.setState({ small: Array(9).fill(false) });
+        }
+    };
+
+    const changeCellValue = (index, value) => {
+        if (!cellLocks[index]) {
+            let values = [...cellValues];
+            values[index] = value;
+            setCellValues(values);
+        }
+    };
+
+    return (
+        <div>
+            <div className="grid" tabIndex="0">
+                { cellValues.map((v, i) =>
+                    <CellHook
+                        key={i}
+                        index={i}
+                        value={v}
+                        isLocked={cellLocks[i]}
+                        setValue={v => changeCellValue(i, v)}
+                        forwardRef={(input) => cells.current[i] = input}
+                    />
+                )}
+            </div>
+            <div id="buttons">
+                <button onClick={generate}>{isIdle() ? "Generate" : "Stop"}</button>
+                <button onClick={clear}>Clear</button>
+                <button onClick={solve}>{isIdle() ? "Solve" : "Stop"}</button>
+                <button onClick={lock}>Lock</button>
+                <button onClick={unlock}>Unlock</button>
+            </div>
+        </div>
+    );
+};
+
 class SudokuGrid extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
             cellValues: Array(81).fill(undefined),
             cellLocks: Array(81).fill(false),
-            shouldClearSmall: false,
             worker: undefined,
         };
         this.cells = [];
@@ -144,6 +244,77 @@ class SudokuGrid extends React.Component {
     }
 }
 
+const CellHook = props => {
+    const [small, setSmall] = React.useState(Array(9).fill(false));
+
+    let pointerTimer = undefined;
+    let pointerValue = undefined;
+
+    const clearPointerTimer = () => {
+        clearTimeout(pointerTimer);
+        pointerTimer = undefined;
+    };
+
+    const onPointerDown = (event, value) => {
+        if (!props.isLocked) {
+            if (pointerTimer !== undefined) {
+                clearPointerTimer();
+            }
+            pointerTimer = setTimeout(() => {
+                console.log(pointerValue);
+                props.setValue(pointerValue);
+                clearPointerTimer();
+            }, 250);
+            pointerValue = value;
+        }
+    };
+
+    const onPointerUp = (event, value) => {
+        if (pointerTimer !== undefined) {
+            clearPointerTimer();
+            let newSmall = Array.from(small);
+            newSmall[value] = !newSmall[value];
+            setSmall(newSmall);
+        }
+    };
+
+    const onPointerLeave = (event) => clearPointerTimer();
+
+    let row = ~~(props.index / 9);
+    let col = props.index % 9;
+    let area = 3 * ~~(row / 3) + ~~(col / 3);
+    let classes = ['cell', `R${row}`, `C${col}`, `A${area}`];
+    if (props.isLocked) classes.push("locked");
+    let smallNotes = [];
+    if (props.value === undefined) {
+        for (let i = 1; i <= 9; i++) {
+            smallNotes.push(
+                <div
+                    className="small"
+                    onMouseDown={e => onPointerDown(e, i)}
+                    onMouseLeave={() => onPointerLeave()}
+                    onMouseUp={e => onPointerUp(e, i)}
+                    onPointerDown={e => onPointerDown(e, i)}
+                    onPointerLeave={() => onPointerLeave()}
+                    onPointerUp={e => onPointerUp(e, i)}
+                    key={i}>
+                    {small[i] ? i : ""}
+                </div>);
+        }
+    }
+    return (
+        <div className={classes.join(' ')}>
+            <div
+                className="big"
+                onTouchStart={() => {props.setValue(undefined)}}
+                onMouseDown={() => {props.setValue(undefined)}}>
+                { props.value }
+            </div>
+            { smallNotes }
+        </div>
+    );
+};
+
 class Cell extends React.Component {
     constructor(props) {
         super(props);
@@ -169,6 +340,9 @@ class Cell extends React.Component {
                         onMouseDown={e => this.onPointerDown(e, i)}
                         onMouseLeave={() => this.onPointerLeave()}
                         onMouseUp={e => this.onPointerUp(e, i)}
+                        onPointerDown={e => this.onPointerDown(e, i)}
+                        onPointerLeave={() => this.onPointerLeave()}
+                        onPointerUp={e => this.onPointerUp(e, i)}
                         // onTouchStart={e => this.onPointerDown(e, i)}
                         // onTouchEnd={e => this.onPointerUp(e, i)}
                         key={i}>
@@ -203,7 +377,7 @@ class Cell extends React.Component {
                 console.log(this.pointerValue);
                 this.props.setValue(this.pointerValue);
                 this.clearPointerTimer();
-            }, 500);
+            }, 250);
             this.pointerValue = value;
         }
     }
@@ -232,7 +406,7 @@ document.addEventListener("keydown", event => { pressedKeys.add(event.key); });
 document.addEventListener("keyup", event => { pressedKeys.delete(event.key); });
 
 ReactDOM.render(
-    <SudokuGrid />,
+    <SudokuGridHook />,
     document.getElementById('app')
 );
 
