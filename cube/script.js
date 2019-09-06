@@ -25,52 +25,52 @@ let currentTouch;
 let axes;
 
 let moves = [];
-
-function addMove(m) {
-    moves.push(m);
-    console.log(m.notation());
-}
+const notationLetters = ["XLMR", "YDEU", "ZBSF"];
 
 class Move {
-    constructor(rotationAxis, coordinates = undefined) {
-        this.axisIndex = rotationAxis.findIndex(x => x !== 0);
-        this.axisDirection = rotationAxis[this.axisIndex];
-        if (this.axisIndex === 1) {
-            this.axisDirection *= -1;
-        }
-        if (coordinates !== undefined) {
-            this.coordinateValue = coordinates[this.axisIndex];
-        } else {
-            this.coordinateValue = undefined;
-        }
+    constructor(axisIndex, rotationAngle, coordinateValue = undefined) {
+        this.axisIndex = axisIndex;
+        this.rotationAngle = rotationAngle;
+        this.coordinateValue = coordinateValue;
     }
 
-    equals(other) {
-        return this.axisIndex === other.axisIndex
-            && this.axisDirection === other.axisDirection
-            && this.coordinateValue === other.coordinateValue;
+    altCoordinateValue() {
+        if (this.axisIndex === 1) return -this.coordinateValue;
+        return this.coordinateValue;
+    }
+
+    altRotationAngle() {
+        if (this.axisIndex === 1) return -this.rotationAngle;
+        return this.rotationAngle;
+    }
+
+    inverse() {
+        return new Move(this.axisIndex, -this.rotationAngle, this.coordinateValue);
+    }
+
+    letter() {
+        if (this.coordinateValue === undefined) return notationLetters[this.axisIndex][0];
+        return notationLetters[this.axisIndex][this.altCoordinateValue() + 2];
     }
 
     notation() {
-        if (this.coordinateValue === undefined) {
-            let axisName = "XYZ"[this.axisIndex];
-            return axisName + (this.axisDirection === 1 ? "" : "'");
-        } else if (this.coordinateValue === 0) {
-            let sliceName = "MES"[this.axisIndex];
-            return sliceName + (this.axisDirection === 1 ? "" : "'");
-        } else {
-            let faces = [["L", "R"], ["D", "U"], ["B", "F"]];
-            let i = (this.axisDirection * this.coordinateValue + 1) / 2;
-            let moveName = faces[this.axisIndex][i];
-            if (this.coordinateValue === -1) {
-                moveName += "'";
-            }
-            return moveName;
+        const relativeAngle = this.altCoordinateValue() === -1 ? -this.altRotationAngle() : this.altRotationAngle();
+        switch (relativeAngle) {
+            case 1:
+                return this.letter();
+            case 2:
+            case -2:
+                return this.letter() + "2";
+            case -1:
+                return this.letter() + "'";
         }
     }
 
-    toString() {
-        return `(${this.axisIndex}, ${this.axisDirection}, ${this.coordinateValue})`;
+    static random() {
+        const axisIndex = Math.floor(Math.random() * 3);
+        const rotationAngle = Math.floor(Math.random() * 2) * 2 - 1;
+        const coordinateValue = Math.floor(Math.random() * 3) - 1;
+        return new Move(axisIndex, rotationAngle, coordinateValue);
     }
 }
 
@@ -252,6 +252,7 @@ class Cube {
             }
         }
         this.isLocked = false;
+        this.moves = [];
     }
 
     /**
@@ -284,52 +285,78 @@ class Cube {
      * @param sticker {Sticker} a Sticker of the slice that is being rotated
      * @param direction {number[]} 2D direction in which the sticker is being rotated
      */
-    moveSticker(sticker, direction) {
-        if (this.isLocked) {
-            return;
-        }
+    rotateSlice(sticker, direction) {
+        if (this.isLocked) return;
         this.isLocked = true;
 
         const forceVector = sticker.makeForce(direction);
         const faceVector = sticker.getFaceVector();
+
         const rotationAxis = vec3.cross(vec3.create(), faceVector, forceVector);
+        const axisIndex = rotationAxis.findIndex(x => x !== 0);
+        let rotationAngle = rotationAxis[axisIndex];
+        const coordinates = vec3.multiply(vec3.create(), sticker.getCoordinates(), rotationAxis);
+        const coordinateValue = coordinates[axisIndex] * rotationAngle;
+
+        const m = new Move(axisIndex, rotationAngle, coordinateValue);
+        this.animateMove(m);
+    }
+
+    animateMove(m, callback=undefined) {
+        this.addMove(m);
+        let rotationAxis = [0, 0, 0];
+        rotationAxis[m.axisIndex] = 1;
 
         // To avoid graphical glitches that appear if the stickers are rotated individually, they are grouped in a
         // single element, rotate the element as a whole in an animation, then extract the stickers and rotate them to
         // their final position instantly.
-        const face = [];  // list of stickers to rotate
+        const stickers = [];  // list of stickers to rotate
         const rotationElement = document.createElement("div");    // div containing the sticker elements
         this.element.appendChild(rotationElement);
         rotationElement.classList.add("rotation-block");
 
         // add all stickers that should be rotated
-        const coordinates = vec3.multiply(vec3.create(), sticker.getCoordinates(), rotationAxis);
         for (let s of this.stickers) {
             let t = s.getCoordinates();
-            vec3.multiply(t, t, rotationAxis);
-            if (vec3.equals(coordinates, t)) {
-                face.push(s);
+            if (m.coordinateValue === undefined || t[m.axisIndex] === m.coordinateValue) {
+                stickers.push(s);
                 rotationElement.appendChild(s.element);
             }
         }
 
-        addMove(new Move(rotationAxis, coordinates));
-
         // callback when rotation animation finishes (all stickers are removed from the face, and rotated to their
         // final position (not animated)
         rotationElement.addEventListener('transitionend', function () {
-            for (let s of face) {
+            for (let s of stickers) {
                 this.element.appendChild(s.element);
-                s.rotate(Math.PI / 2, rotationAxis);
+                s.rotate(m.rotationAngle * Math.PI / 2, rotationAxis);
             }
             rotationElement.remove();
             this.isLocked = false;  // unlock the cube after the rotation animation
+
+            if (callback !== undefined) callback();
         }.bind(this), false);
 
         // the rotation is called asynchronously otherwise it isn't animated
         setTimeout(function () {
-            rotationElement.style.transform = `rotate3d(${rotationAxis},90deg)`;
+            rotationElement.style.transform = `rotate3d(${rotationAxis},${90 * m.rotationAngle}deg)`;
         }, 0);
+    }
+
+    fastMove(m) {
+        // do nothing if cube is already performing a rotation
+        if (this.isLocked) return;
+
+        this.addMove(m);
+        let rotationAxis = [0, 0, 0];
+        rotationAxis[m.axisIndex] = 1;
+
+        for (let s of this.stickers) {
+            let t = s.getCoordinates();
+            if (m.coordinateValue === undefined || t[m.axisIndex] === m.coordinateValue) {
+                s.rotate(m.rotationAngle * Math.PI / 2, rotationAxis);
+            }
+        }
     }
 
     /**
@@ -342,73 +369,20 @@ class Cube {
      * @param sticker {Sticker} a Sticker of the cube
      * @param direction {number[]} 2D direction in which the sticker is being rotated
      */
-    moveCube(sticker, direction) {
+    rotateCube(sticker, direction) {
 
-        if (this.isLocked) {
-            return;
-        }
+        if (this.isLocked) return;
         this.isLocked = true;
 
         const forceVector = sticker.makeForce(direction);
         const faceVector = sticker.getFaceVector();
         const rotationAxis = vec3.cross(vec3.create(), faceVector, forceVector);
+        const axisIndex = rotationAxis.findIndex(x => x !== 0);
+        let rotationAngle = rotationAxis[axisIndex];
 
-        addMove(new Move(rotationAxis));
-
-        // To avoid graphical glitches that appear if the stickers are rotated individually, they are grouped in a
-        // single element, rotate the element as a whole in an animation, then extract the stickers and rotate them to
-        // their final position instantly.
-        const rotationElement = document.createElement("div");    // div containing the sticker elements
-        this.element.appendChild(rotationElement);
-        rotationElement.classList.add("rotation-block");
-
-        // add all stickers
-        for (let s of this.stickers) {
-            rotationElement.appendChild(s.element);
-        }
-
-        // callback when rotation animation finishes (all stickers are removed from the face, and rotated to their
-        // final position (not animated)
-        rotationElement.addEventListener('transitionend', function () {
-            for (let s of this.stickers) {
-                this.element.appendChild(s.element);
-                s.rotate(Math.PI / 2, rotationAxis);
-            }
-            rotationElement.remove();
-            this.isLocked = false;  // unlock the cube after the rotation animation
-        }.bind(this), false);
-
-        // the rotation is called asynchronously otherwise it isn't animated
-        setTimeout(function () {
-            rotationElement.style.transform = `rotate3d(${rotationAxis},90deg)`;
-        }, 0);
-    }
-
-    /**
-     * Rotate a slice of the cube instantly (not animated)
-     *
-     * @param axis {number[]} triple describing the axis of rotation (should be in {-1, 0, 1}^3 with exactly one
-     * non-zero value)
-     * @param coordinates {number[]} triple of coordinates of a small cube (in {-1, 0, 1}^3). The designated cube
-     * defines the slice that will be rotated
-     */
-    fastMove(axis, coordinates) {
-        // do nothing if cube is already performing a rotation
-        if (this.isLocked) {
-            return;
-        }
-
-        // extract the coordinate that corresponds to the rotation axis
-        vec3.multiply(coordinates, coordinates, axis);
-
-        // add all stickers that should be rotated
-        for (let s of this.stickers) {
-            let t = s.getCoordinates();
-            vec3.multiply(t, t, axis);
-            if (vec3.equals(coordinates, t)) {
-                s.rotate(Math.PI / 2, axis);
-            }
-        }
+        const m = new Move(axisIndex, rotationAngle);
+        this.animateMove(m);
+        this.addMove(m);
     }
 
     /**
@@ -418,12 +392,7 @@ class Cube {
      */
     shuffle(n) {
         for (let i = 0; i < n; i++) {
-            const axisIndex = Math.floor(Math.random() * 3);
-            let axis = [0, 0, 0];
-            axis[axisIndex] = 2 * Math.floor(Math.random() * 2) - 1;
-            let coordinates = [0, 0, 0];
-            coordinates[axisIndex] = Math.floor(Math.random() * 3) - 1;
-            this.fastMove(axis, coordinates);
+            this.fastMove(Move.random());
         }
     }
 
@@ -434,6 +403,7 @@ class Cube {
         for (let s of this.stickers) {
             s.reset();
         }
+        this.moves = [];
     }
 
     /**
@@ -479,6 +449,36 @@ class Cube {
         refPoint.remove();
         return axes;
     }
+
+    addMove(newMove) {
+        const lastMove = this.moves[this.moves.length - 1];
+        if (lastMove !== undefined && lastMove.letter() === newMove.letter()) {
+            lastMove.rotationAngle = (lastMove.rotationAngle + newMove.rotationAngle + 5) % 4 - 1;
+            if (lastMove.rotationAngle === 0) {
+                this.moves.pop();
+            }
+        } else {
+            this.moves.push(newMove);
+        }
+    }
+
+    showMoves() {
+        console.log(this.moves.map(x => x.notation()).join(", "));
+    }
+
+    rewind() {
+        const lastMove = this.moves[this.moves.length - 1];
+        if (lastMove !== undefined) {
+            this.animateMove(new Move(lastMove.axisIndex, -lastMove.rotationAngle, lastMove.coordinateValue));
+        }
+    }
+
+    rewindAll() {
+        if (this.moves.length > 0) {
+            const lastmove = this.moves[this.moves.length - 1];
+            this.animateMove(lastmove.inverse(), this.rewindAll.bind(this));
+        }
+    }
 }
 
 
@@ -513,9 +513,9 @@ window.addEventListener('keydown', function (event) {
         if (direction) {
             event.preventDefault();
             if (event.shiftKey) {
-                cube.moveCube(sticker, direction);
+                cube.rotateCube(sticker, direction);
             } else {
-                cube.moveSticker(sticker, direction);
+                cube.rotateSlice(sticker, direction);
             }
         }
     }
@@ -562,9 +562,9 @@ function handleTouchMove(event) {
                 const t = vec2.sub(vec2.create(), [touch.clientX, touch.clientY], currentTouch.location);
                 if (vec2.length(t) >= side / 3) {
                     if (event.touches.length === 1) {
-                        cube.moveSticker(currentTouch.sticker, t);
+                        cube.rotateSlice(currentTouch.sticker, t);
                     } else {
-                        cube.moveCube(currentTouch.sticker, t);
+                        cube.rotateCube(currentTouch.sticker, t);
                     }
                     currentTouch = undefined;
                 }
