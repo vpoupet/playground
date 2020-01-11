@@ -5,10 +5,6 @@ html
     title Sudoku
     link(rel="stylesheet" href="style.css")
     link(href="https://fonts.googleapis.com/css?family=Inconsolata" rel="stylesheet")
-    //script(crossorigin src="https://unpkg.com/react@16/umd/react.development.js")
-    //script(crossorigin src="https://unpkg.com/react-dom@16/umd/react-dom.development.js")
-    script(src="react.development.js")
-    script(src="react-dom.development.js")
   body
     h1 Sudoku
     #app
@@ -30,5 +26,7 @@ html
             li If a solution is found, values are displayed
             li If no solution exists, the solver ends (button labeled "Solve" again) but cells are not modified
 
+    script(src="https://unpkg.com/react@16/umd/react.development.js" crossorigin)
+    script(src="https://unpkg.com/react-dom@16/umd/react-dom.development.js" crossorigin)
     script(src="app.js")
-    //script(src="solver.js")
+    script(src="solver.js")
