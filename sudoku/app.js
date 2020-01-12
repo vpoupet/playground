@@ -1,15 +1,42 @@
 let pressedKeys = new Set();
 
-const SudokuGrid = props => {
+const SudokuGrid = () => {
+    // An array of 81 values in [1, 9] indicating the value in a cell, or undefined if the cell is empty
     const [cellValues, setCellValues] = React.useState(Array(81).fill(undefined));
-    const [cellLocks, setCellLocks] = React.useState(Array(81).fill(false));
-    const [cellAnnotations, setCellAnnotations] = React.useState(Array(81).fill(Array(9).fill(false)));
-    const [worker, setWorker] = React.useState(undefined);
-    const cells = React.useRef([]);
 
+    let annotations = Array(81);
+    for (let i = 0; i < 81; i++) {
+        annotations[i] = Array(9).fill(false);
+    }
+    // An array of 81 values containing for each cell an array of 9 booleans indicating which value annotations are
+    // set
+    const [cellAnnotations, setCellAnnotations] = React.useState(annotations);
+    // An arrat of 81 booleans indicating whether each cell is locked (true) or not (false)
+    const [cellLocks, setCellLocks] = React.useState(Array(81).fill(false));
+    // The current active worker, or undefined if not currently solving
+    const [worker, setWorker] = React.useState(undefined);
+
+    /**
+     * Return whether the app is idle (no worker currently solving) or not
+     * @returns {boolean} true if there is an acitve worker, false otherwise
+     */
     const isIdle = () => worker === undefined;
+
+    /**
+     * Lock all cells that currently have a value set
+     */
     const lock = () => setCellLocks(cellValues.map(v => v !== undefined));
+
+    /**
+     * Unlock all cells
+     */
+
     const unlock = () => setCellLocks(Array(81).fill(false));
+
+    /**
+     * Solve the grid with current values
+     * This method calls a webworker in the background to run the search algorithm
+     */
     const solve = () => {
         if (isIdle()) {
             // start a new computation with a webworker
@@ -32,24 +59,24 @@ const SudokuGrid = props => {
     };
 
     /**
-     * Solve the grid with current values
-     * This method calls a Webworker in the background to run the search algorithm
+     * Generate a new Sudoku grid
+     * The generated grid has a single solution and all given values are necessary
      */
     const generate = () => {
         if (isIdle()) {
             // start a new computation with a webworker
             let newWorker = new Worker('./solver.js');
             newWorker.postMessage({ command: "generate" });
+            setWorker(newWorker);
 
             newWorker.onmessage = event => {
                 if (event.data !== undefined) {
                     setCellValues(event.data);
                     setCellLocks(event.data.map(v => v !== undefined));
                 }
-                worker.terminate();
+                newWorker.terminate();
                 setWorker(undefined);
             };
-            setWorker(newWorker);
         } else {
             // stop current computation
             worker.terminate();
@@ -58,22 +85,42 @@ const SudokuGrid = props => {
     };
 
     /**
-     * Unset the value for all unlocked cells
+     * Unset the value for all unlocked cells, and clear all annotations
      */
     const clear = () => {
         if (isIdle()) {
             setCellValues(cellValues.map((v, i) => cellLocks[i] ? v : undefined));
-        }
-        for (let cell of cells) {
-            cell.setState({ small: Array(9).fill(false) });
+            let annotations = Array(81);
+            for (let i = 0; i < 81; i++) {
+                annotations[i] = Array(9).fill(false);
+            }
+            setCellAnnotations(annotations);
         }
     };
 
+    /**
+     * Change the value of a given cell
+     * @param index {number} the index of the cell to change
+     * @param value {number} the value of the cell (undefined to unset the cell)
+     */
     const changeCellValue = (index, value) => {
         if (!cellLocks[index]) {
             let values = [...cellValues];
             values[index] = value;
             setCellValues(values);
+        }
+    };
+
+    /**
+     * Toggles one of the annotations of a cell
+     * @param index {number} index of the cell
+     * @param value {number} value of the annotation to toggle
+     */
+    const toggleAnnotation = (index, value) => {
+        if (!cellLocks[index]) {
+            let annotations = [...cellAnnotations];
+            annotations[index][value] = !annotations[index][value];
+            setCellAnnotations(annotations);
         }
     };
 
@@ -87,9 +134,10 @@ const SudokuGrid = props => {
                 key: i,
                 index: i,
                 value: v,
+                annotations: cellAnnotations[i],
                 isLocked: cellLocks[i],
                 setValue: v => changeCellValue(i, v),
-                forwardRef: input => cells.current[i] = input
+                toggleAnnotation: v => toggleAnnotation(i, v)
             }))
         ),
         React.createElement(
@@ -125,8 +173,6 @@ const SudokuGrid = props => {
 };
 
 const Cell = props => {
-    const [small, setSmall] = React.useState(Array(9).fill(false));
-
     let pointerTimer = undefined;
     let pointerValue = undefined;
 
@@ -152,9 +198,7 @@ const Cell = props => {
     const onPointerUp = (event, value) => {
         if (pointerTimer !== undefined) {
             clearPointerTimer();
-            let newSmall = Array.from(small);
-            newSmall[value] = !newSmall[value];
-            setSmall(newSmall);
+            props.toggleAnnotation(value);
         }
     };
 
@@ -165,10 +209,10 @@ const Cell = props => {
     let area = 3 * ~~(row / 3) + ~~(col / 3);
     let classes = ['cell', `R${row}`, `C${col}`, `A${area}`];
     if (props.isLocked) classes.push("locked");
-    let smallNotes = [];
+    let annotations = [];
     if (props.value === undefined) {
         for (let i = 1; i <= 9; i++) {
-            smallNotes.push(React.createElement(
+            annotations.push(React.createElement(
                 'div',
                 {
                     className: 'small',
@@ -179,7 +223,7 @@ const Cell = props => {
                     onPointerLeave: () => onPointerLeave(),
                     onPointerUp: e => onPointerUp(e, i),
                     key: i },
-                small[i] ? i : ""
+                props.annotations[i] ? i : ""
             ));
         }
     }
@@ -198,7 +242,7 @@ const Cell = props => {
                 } },
             props.value
         ),
-        smallNotes
+        annotations
     );
 };
 
