@@ -1,0 +1,128 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  --cell-size: 10vw;
+}
+@media (min-width: 800px) {
+  html {
+    --cell-size: 80px;
+  }
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  background: #F1F4F9;
+  font-family: "Inconsolata", monospace;
+  color: #27374E;
+  font-size: 18px;
+}
+
+h1 {
+  margin: 30px 0;
+}
+
+.grid {
+  box-sizing: content-box;
+  width: calc(9 * var(--cell-size));
+  display: flex;
+  flex-wrap: wrap;
+  border: 2px solid #27374E;
+  outline: none;
+}
+
+.cell {
+  position: relative;
+  width: var(--cell-size);
+  height: var(--cell-size);
+  font-family: "Inconsolata", monospace;
+  font-size: calc(.8 * var(--cell-size));
+  color: #3C7BDB;
+  font-weight: lighter;
+  cursor: pointer;
+  background: #FFFFFF;
+  border: 0.5px solid #D7DBE4;
+  border-collapse: collapse;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+.cell.locked {
+  color: #27374E;
+}
+.cell.highlighted {
+  background: #DBE1E8;
+}
+.cell.focused {
+  background: #AED5FA;
+}
+.cell.R2, .cell.R5 {
+  border-bottom: 2px solid #27374E;
+}
+.cell.C2, .cell.C5 {
+  border-right: 2px solid #27374E;
+}
+.cell .big {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.cell .small {
+  font-size: calc(.2 * var(--cell-size));
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  width: 30%;
+  height: 30%;
+  text-align: center;
+}
+.cell .small:hover {
+  border: 2px solid #AAAAAA;
+}
+
+#buttons {
+  display: flex;
+  margin: 10px 0;
+  flex-direction: row;
+  justify-content: space-between;
+  width: 100%;
+}
+
+button {
+  padding: 3px;
+  width: 15%;
+  font-size: calc(0.2 * var(--cell-size));
+}
+
+#info {
+  width: calc(10 * var(--cell-size));
+  line-height: 1.6;
+  margin-top: 30px;
+}
+#info ul > li {
+  margin-left: 20px;
+}
+
+strong {
+  color: #3C7BDB;
+}
+
+/*# sourceMappingURL=style.css.map */
