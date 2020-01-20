@@ -12,7 +12,9 @@ Drawing board to make [Aquabeads](https://www.aquabeadsart.com) patterns (can be
 
 A *Sudoku* solver. Main page is in React, solver runs in a *web worker* using
 [Donald Knuth's dancing links](https://arxiv.org/abs/cs/0011047) technique.
-(Alternate version of the interface [in Svelte](https://vpoupet.github.io/playground/sudoku/public/index.html))
+
+There is also an [alternate version](https://vpoupet.github.io/playground/sudoku/public/) of the interface in
+[Svelte](https://svelte.dev/).
 
 ## [SVG](https://vpoupet.github.io/playground/svg/index.html)
 
