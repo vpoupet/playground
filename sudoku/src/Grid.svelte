@@ -22,6 +22,12 @@
         return worker === undefined;
     }
 
+    function clearAnnotations() {
+        for (let i = 0; i < 81; i++) {
+            cellAnnotations[i] = Array(9).fill(false);
+        }
+    }
+
     function onSetCellValue(e) {
         cellValues[e.detail.index] = e.detail.value;
     }
@@ -61,6 +67,7 @@
             worker.onmessage = event => {
                 if (event.data !== undefined) {
                     cellValues = event.data;
+                    clearAnnotations();
                     lock();
                 }
                 worker.terminate();
@@ -105,8 +112,8 @@
             if (!cellLocks[i]) {
                 cellValues[i] = undefined;
             }
-            cellAnnotations[i] = Array(9).fill(false);
         }
+        clearAnnotations();
     }
 </script>
 
