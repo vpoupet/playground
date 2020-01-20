@@ -28,7 +28,6 @@
                 clearPointerTimer();
             }
             pointerTimer = setTimeout(() => {
-                console.log(i);
                 dispatch('setCellValue', {index: index, value: i + 1});
                 clearPointerTimer();
             }, 250);
