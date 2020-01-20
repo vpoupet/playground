@@ -50,9 +50,7 @@
      */
     function lock() {
         for (let i = 0; i < 81; i++) {
-            if (cells[i].value !== undefined) {
-                cells[i].isLocked = true;
-            }
+            cells[i].isLocked = cells[i].value !== undefined;
         }
     }
 
