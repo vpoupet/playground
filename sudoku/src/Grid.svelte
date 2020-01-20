@@ -16,6 +16,9 @@
 
     // The current active worker, or undefined if not currently solving
     let worker = undefined;
+    // Whether the solver is currently running (false) or not (true)
+    let isIdle;
+    $: isIdle = worker === undefined;
 
     function clearAnnotations() {
         for (let i = 0; i < 81; i++) {
@@ -68,7 +71,7 @@
      * The generated grid has a single solution and all given values are necessary
      */
     function generate() {
-        if (worker === undefined) {
+        if (isIdle) {
             // start a new computation with a webworker
             worker = new Worker('./solver.js');
             worker.postMessage({command: "generate"});
@@ -96,7 +99,7 @@
      * This method calls a webworker in the background to run the search algorithm
      */
     function solve() {
-        if (worker === undefined) {
+        if (isIdle) {
             // start a new computation with a webworker
             worker = new Worker('./solver.js');
             worker.postMessage({command: "solve", values: cells.map(c => c.value)});
@@ -142,9 +145,9 @@
         {/each}
     </div>
     <div id="buttons">
-        <button on:click={generate}>{worker === undefined ? 'Generate' : 'Stop'}</button>
+        <button on:click={generate}>{isIdle ? 'Generate' : 'Stop'}</button>
         <button on:click={clear}>Clear</button>
-        <button on:click={solve}>{worker === undefined ? 'Solve' : 'Stop'}</button>
+        <button on:click={solve}>{isIdle ? 'Solve' : 'Stop'}</button>
         <button on:click={lock}>Lock</button>
         <button on:click={unlock}>Unlock</button>
     </div>
