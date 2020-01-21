@@ -1,6 +1,8 @@
 *
-  box-sizing: content-box
+  box-sizing: border-box
   font-family: "Arial", "Arial", sans-serif
+  margin: 0
+  padding: 0
 
 html
   --blue-color: #4794D6
@@ -8,6 +10,14 @@ html
   --black-color: #020304
   --white-color: #EFF5FE
   --light-blue-color: #D0E7F7
+  --shadow-color: #000000AA
+  --main-width: 100vw
+  @media(min-width: 600px)
+    --main-width: 600px
+  --card-ratio: calc(10/7)
+  --card-width: calc(var(--main-width) * .18)
+  --card-height: calc(var(--card-width) * var(--card-ratio))
+
 
 body
   color: var(--black-color)

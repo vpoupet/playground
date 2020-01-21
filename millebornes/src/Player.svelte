@@ -29,16 +29,17 @@
 
 <style>
     .player {
+        width: 100%;
         margin: 10px 0;
         padding: 5px;
-        border: 3px solid #CEE4F2;
+        border: 2px solid var(--light-blue-color);
         border-radius: 10px;
         background-color: var(--light-blue-color);
     }
 
     .player.selected {
         border-color: black;
-        box-shadow: 3px 3px 3px var(--black-color);
+        box-shadow: 3px 3px 3px var(--shadow-color);
     }
 
     .name {
@@ -49,20 +50,22 @@
     .cards {
         display: flex;
         flex-direction: row;
-        min-height: 200px;
+        justify-content: space-between;
+        width: 100%;
+        min-height: calc(1.45 * var(--card-height));
     }
 
     .cards .column {
         display: flex;
         flex-direction: column;
-        width: 110px;
+        width: 18%;
     }
 
     .track {
         position: relative;
         display: flex;
         width: 100%;
-        height: 40px;
+        height: calc(.5 * var(--card-width));
         margin-top: 10px;
         border: 1px black solid;
         background-color: #d1d1d1;
@@ -70,7 +73,8 @@
 
     .track hr {
         position: absolute;
-        top: 20px;
+        height: 0;
+        top: calc(.25 * var(--card-width));
         border:none;
         border-top:5px dashed #fff;
         width:100%;

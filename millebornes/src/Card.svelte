@@ -11,19 +11,18 @@
 
 <style>
     .card {
-        width: 100px;
-        margin: 0 5px;
+        width: var(--card-width);
     }
 
     .card:not(:last-child) {
-        margin-bottom: -120px;
+        margin-bottom: calc(-.85 * var(--card-height));
     }
 
     .container {
         position: relative;
         height: 0;
         width: 100%;
-        padding-bottom: 142.86%;
+        padding-bottom: calc(var(--card-ratio) * 100%);
     }
 
     .inner {
@@ -34,8 +33,9 @@
         height: 100%;
         background-size: cover;
         border: 1px black solid;
-        border-radius: 10px;
-        box-shadow: 3px 3px 3px var(--black-color);
+        border-radius: calc(.05 * var(--card-width));
+        --shadow-size: calc(.03 * var(--card-width));
+        box-shadow: var(--shadow-size) var(--shadow-size) var(--shadow-size) var(--shadow-color);
     }
 
 </style>

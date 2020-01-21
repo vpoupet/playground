@@ -19,6 +19,9 @@
         if (players.length >= 3) {
             players = players.slice(0, -1);
         }
+        if (selectedPlayer >= players.length) {
+            selectedPlayer = players.length - 1;
+        }
 	}
 
 	function newGame() {
@@ -39,7 +42,7 @@
 
 <style>
     main {
-        max-width: 600px;
+        width: var(--main-width);
         margin: auto;
         display: flex;
         flex-direction: column;
@@ -47,13 +50,26 @@
         justify-content: center;
     }
 
+    button {
+        background-color: var(--white-color);
+    }
     #buttons {
         margin: 5px 0;
     }
 
     #cards {
+        width: 100%;
         display: flex;
+        justify-content: space-between;
         flex-direction: row;
+    }
+
+    #cards .column {
+        width: 18%;
+    }
+
+    #players {
+        width: 100%;
     }
 </style>
 
@@ -64,11 +80,11 @@
         <button on:click={newGame}>New Game</button>
 	</div>
     <div id="cards">
-        <div><Card value="25" on:click={() => addCard(25)}/></div>
-        <div><Card value="50" on:click={() => addCard(50)}/></div>
-        <div><Card value="75" on:click={() => addCard(75)}/></div>
-        <div><Card value="100" on:click={() => addCard(100)}/></div>
-        <div><Card value="200" on:click={() => addCard(200)}/></div>
+        <div class="column"><Card value="25" on:click={() => addCard(25)}/></div>
+        <div class="column"><Card value="50" on:click={() => addCard(50)}/></div>
+        <div class="column"><Card value="75" on:click={() => addCard(75)}/></div>
+        <div class="column"><Card value="100" on:click={() => addCard(100)}/></div>
+        <div class="column"><Card value="200" on:click={() => addCard(200)}/></div>
     </div>
     <div id="players">
         {#each players as player, i}
