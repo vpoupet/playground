@@ -52,18 +52,14 @@ export class BoneLine {
 
     solve(point1, point2, nbIterations) {
         for (let i = 0; i < nbIterations; i++) {
-            this.firstBone.node1.moveTo(point1);
-            for (const bone of this.bones) {
-                bone.adjust(false);
-            }
             this.lastBone.node2.moveTo(point2);
             for (const bone of this.bones.reverse()) {
                 bone.adjust(true);
             }
+            this.firstBone.node1.moveTo(point1);
+            for (const bone of this.bones) {
+                bone.adjust(false);
+            }
         }
-    }
-
-    sayHello() {
-        console.log("Hello");
     }
 }

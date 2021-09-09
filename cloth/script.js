@@ -1,20 +1,29 @@
 import {BoneLine} from "./bones.js";
 import {Vector2} from "./geometry.js";
 
+let context;
+const target = new Vector2(800, 600);
+const anchor = new Vector2(400, 300);
+const boneLine = new BoneLine(new Array(50).fill(10));
+
+function update() {
+    boneLine.solve(anchor, target, 5);
+    context.clearRect(0, 0, 800, 600);
+    boneLine.draw(context);
+    window.requestAnimationFrame(update);
+}
+
 window.addEventListener("load", () => {
     const canvas = document.getElementById("canvas");
     canvas.width = 800;
     canvas.height = 600;
-    const context = canvas.getContext("2d");
-
-    const boneLine = new BoneLine([40, 40, 40, 40, 40, 40, 40]);
+    context = canvas.getContext("2d");
 
     canvas.addEventListener("mousemove", (e) => {
-        context.clearRect(0, 0, 800, 600);
         const rect = e.target.getBoundingClientRect();
-        const x = e.clientX - rect.x;
-        const y = e.clientY - rect.y;
-        boneLine.solve(new Vector2(400, 300), new Vector2(x, y), 5);
-        boneLine.draw(context);
+        target.x = e.clientX - rect.x;
+        target.y = e.clientY - rect.y;
     });
+
+    update();
 });
