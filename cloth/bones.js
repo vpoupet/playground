@@ -20,12 +20,12 @@ export class Bone {
     }
 
     adjust(reversed) {
-        let direction = reversed ? this.node1.sub(this.node2) : this.node2.sub(this.node1);
+        let direction = reversed ? this.node1.subtraction(this.node2) : this.node2.subtraction(this.node1);
         direction.normalize(this.length);
         if (reversed) {
-            this.node1.moveTo(this.node2.add(direction));
+            this.node1.moveTo(this.node2.addition(direction));
         } else {
-            this.node2.moveTo(this.node1.add(direction));
+            this.node2.moveTo(this.node1.addition(direction));
         }
     }
 }
@@ -36,7 +36,7 @@ export class BoneLine {
         let node1 = new Vector2(0, 0);
         let node2;
         for (let length of lengths) {
-            node2 = node1.add(new Vector2(length, 0));
+            node2 = node1.addition(new Vector2(length, 0));
             this.bones.push(new Bone(node1, node2, length));
             node1 = node2;
         }

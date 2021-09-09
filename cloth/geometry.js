@@ -21,12 +21,26 @@ export class Vector2 {
         return Math.sqrt(this.squareNorm());
     }
 
-    add(other) {
+    distanceTo(other) {
+        return this.subtraction(other).norm();
+    }
+
+    addition(other) {
         return new Vector2(this.x + other.x, this.y + other.y);
     }
 
-    sub(other) {
+    add(other) {
+        this.x += other.x;
+        this.y += other.y;
+    }
+
+    subtraction(other) {
         return new Vector2(this.x - other.x, this.y - other.y);
+    }
+
+    sub(other) {
+        this.x -= other.x;
+        this.y -= other.y;
     }
 
     normalize(length = 1) {
