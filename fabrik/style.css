@@ -6,6 +6,7 @@
   width: 800px;
   height: 600px;
   border: 1px black solid;
+  touch-action: none;
 }
 
 /*# sourceMappingURL=style.css.map */
