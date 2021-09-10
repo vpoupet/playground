@@ -1,4 +1,4 @@
-import {Vector2} from "./geometry.js";
+import {Vector2} from "../geometry.js";
 
 export class Bone {
     constructor(node1, node2, length) {

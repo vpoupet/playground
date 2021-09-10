@@ -1,16 +1,19 @@
-import {Vector2} from "./geometry.js";
+import {Vector2} from "../geometry.js";
+
+const GRAVITY = 200;
+const DAMPING_COEFF = 1;
 
 export class Node {
-    constructor(position, mass, isFixed = false) {
-        this.mass = mass;
+    constructor(position, isFixed = false) {
         this.position = position;
         this.speed = new Vector2();
-        this.links = [];
+        this.links = new Set();
         this.isFixed = isFixed;
     }
 
     resetForce() {
-        this.force = new Vector2(0, 1).scaled(this.mass);
+        this.force = new Vector2(0, GRAVITY);
+        this.force.add(this.speed.scaled(-DAMPING_COEFF))
     }
 
     updatePosition(deltaTime) {
@@ -35,31 +38,38 @@ export class Link {
         this.node2 = node2;
         this.length = length;
         this.strength = strength;
+        this.shouldDraw = true;
+        this.strokeStyle = '#000000';
+        this.lineWidth = 1;
+        this.node1.links.add(this);
+        this.node2.links.add(this);
     }
 
     updateForces() {
         const p1 = this.node1.position;
         const p2 = this.node2.position;
-        const d = p1.distanceTo(p2) - this.length;
-        const u = p2.subtraction(p1);
+        const d = Math.min(p1.distanceTo(p2) - this.length, 10);
         if (d > 0) {
+            const u = p2.subtraction(p1);
             this.node1.force.add(u.scaled(d * this.strength));
             this.node2.force.add(u.scaled(-d * this.strength));
         }
     }
 
     draw(context) {
-        context.strokeStyle = '#000000';
-        context.lineWidth = 2;
-        context.beginPath();
-        context.moveTo(...this.node1.position.asTuple());
-        context.lineTo(...this.node2.position.asTuple());
-        context.stroke();
+        if (this.shouldDraw) {
+            context.strokeStyle = this.strokeStyle;
+            context.lineWidth = this.lineWidth;
+            context.beginPath();
+            context.moveTo(...this.node1.position.asTuple());
+            context.lineTo(...this.node2.position.asTuple());
+            context.stroke();
+        }
     }
 }
 
 
-export class Cloth {
+export class MassSpringSystem {
     constructor(nodes, links) {
         this.nodes = nodes;
         this.links = links;
@@ -78,11 +88,31 @@ export class Cloth {
     }
 
     draw(context) {
-        for(const link of this.links) {
+        for (const link of this.links) {
             link.draw(context);
         }
-        for(const node of this.nodes) {
+        for (const node of this.nodes) {
             node.draw(context);
+        }
+    }
+
+    removeNode(node) {
+        for (const link of [...node.links]) {
+            this.removeLink(link);
+        }
+    }
+
+    removeLink(link) {
+        const node1 = link.node1;
+        const node2 = link.node2;
+        this.links.delete(link);
+        node1.links.delete(link);
+        if (node1.links.size === 0) {
+            this.nodes.delete(node1);
+        }
+        node2.links.delete(link);
+        if (node2.links.size === 0) {
+            this.nodes.delete(node2);
         }
     }
 }
