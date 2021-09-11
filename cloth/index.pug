@@ -4,5 +4,11 @@ html
         link(rel="stylesheet" href="style.css")
     body
         #main
+            #controls
+              button#resetButton Reset
+              input#linksCheckBox(type="checkbox" checked)
+              label(for="linksCheckBox") Show links
+              input#textureCheckBox(type="checkbox")
+              label(for="textureCheckBox") Show texture
             canvas#canvas
             script(src="script.js" type="module")

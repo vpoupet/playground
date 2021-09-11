@@ -4,6 +4,10 @@ This projects is a collection of small experimentations with web technologies (m
 
 **Click on the title of each section to access the corresponding page (hosted on github.io).**
 
+## [Cloth](https://vpoupet.github.io/playground/aquabeads/index.html)
+
+A simple cloth 2D simulation with a *spring-mass* system. The cloth can be torn with pointer events.
+
 ## [Aquabeads](https://vpoupet.github.io/playground/aquabeads/index.html)
 
 Drawing board to make [Aquabeads](https://www.aquabeadsart.com) patterns (can be saved as SVG)
@@ -14,18 +18,18 @@ A *Sudoku* solver. Main page is in React, solver runs in a *web worker* using
 [Donald Knuth's dancing links](https://arxiv.org/abs/cs/0011047) technique.
 
 There is also an [alternate version](https://vpoupet.github.io/playground/sudoku/public/) of the interface in
-[Svelte](https://svelte.dev/).
+[Svelte](https://svelte.dev/) (seems to work better for iOS devices).
 
 ## [SVG](https://vpoupet.github.io/playground/svg/index.html)
 
-Generation of SVG code with JS, including support for 3D transformations (not in the SVG standard) by computing the 
+Generation of SVG code with JS, including support for 3D transformations (not in the SVG standard) by computing the
 resulting 2D transformation on relevant nodes of the SVG tree.
 
 ## [Rubik's Cube](https://vpoupet.github.io/playground/cube/index.html)
 
 3D functional representation of the 3x3x3 Rubik's cube using CSS 3D transformations.
 
-Each sticker of the cube is represented by a square `div` element, rotated around the cube with each move. 
+Each sticker of the cube is represented by a square `div` element, rotated around the cube with each move.
 
 ## [Dithering](https://vpoupet.github.io/playground/dithering/index.html)
 
@@ -46,10 +50,10 @@ Generation of 3D [autostereogram](https://en.wikipedia.org/wiki/Autostereogram) 
 
 The user can choose one of the available depth maps and tiles or upload files.
 
-* The depth map image should represent a 3D object by representing the depth of a pixel by its intensity (brightest in 
-front). If the image is a colored image, only the red component is considered.
-* The tile image is used to produce the stereogram (by repeating the tile with horizontal shifts of pixels depending 
-on depth). It is preferable to use a small (less than 128px) tilable pattern.
+* The depth map image should represent a 3D object by representing the depth of a pixel by its intensity (brightest in
+  front). If the image is a colored image, only the red component is considered.
+* The tile image is used to produce the stereogram (by repeating the tile with horizontal shifts of pixels depending
+  on depth). It is preferable to use a small (less than 128px) tilable pattern.
 
 
 ## [Perlin Flight](https://vpoupet.github.io/playground/flight/index.html)
@@ -64,5 +68,5 @@ to the center).
 
 ## [Recaman Sequence](https://vpoupet.github.io/playground/recaman/index.html)
 
-Visual representation of the [Recamán sequence](https://oeis.org/A005132) (as presented in a [Coding Train coding 
+Visual representation of the [Recamán sequence](https://oeis.org/A005132) (as presented in a [Coding Train coding
 challenge](https://www.youtube.com/watch?v=DhFZfzOvNTU)).
