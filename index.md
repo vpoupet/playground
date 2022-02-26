@@ -4,7 +4,7 @@ This projects is a collection of small experimentations with web technologies (m
 
 **Click on the title of each section to access the corresponding page (hosted on github.io).**
 
-## [Cloth](https://vpoupet.github.io/playground/aquabeads/index.html)
+## [Cloth](https://vpoupet.github.io/playground/cloth/index.html)
 
 A simple cloth 2D simulation with a *spring-mass* system. The cloth can be torn with pointer events.
 
