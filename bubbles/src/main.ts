@@ -33,11 +33,14 @@ canvas.addEventListener('click', (e: MouseEvent) => {
 let previousTime: number = performance.now();
 const arena: Arena = new Arena(width, height, playerBubble);
 
-for (let i = 0; i < 10; i++) {
+while(arena.bubbles.length < 20) {
   const x = Math.random() * width;
   const y = Math.random() * height;
   const radius = Math.random() * 40 + 20;
-  const bubble = new Bubble(new Vector(x, y), radius, new Vector());
-  arena.bubbles.push(bubble);
+  const newBubble = new Bubble(new Vector(x, y), radius, new Vector());
+  if (arena.canPlaceBubble(newBubble)) {
+    arena.bubbles.push(newBubble);
+  }
 }
+
 run();

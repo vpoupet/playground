@@ -205,4 +205,14 @@ export class Arena {
             bubble.draw(ctx);
         }
     }
+
+    canPlaceBubble(newBubble: Bubble): boolean {
+        for (const bubble of this.bubbles) {
+            const distance = bubble.position.distanceTo(newBubble.position);
+            if (distance < bubble.radius + newBubble.radius) {
+                return false;
+            }
+        }
+        return true;
+    }
 }
