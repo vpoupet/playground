@@ -4,6 +4,10 @@ This projects is a collection of small experimentations with web technologies (m
 
 **Click on the title of each section to access the corresponding page (hosted on github.io).**
 
+## [Bubbles](https://vpoupet.github.io/playground/bubbles/dist/index.html)
+
+A small game based on the mobile game *Osmos*.
+
 ## [Cloth](https://vpoupet.github.io/playground/cloth/index.html)
 
 A simple cloth 2D simulation with a *spring-mass* system. The cloth can be torn with pointer events.
