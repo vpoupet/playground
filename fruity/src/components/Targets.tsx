@@ -25,7 +25,7 @@ export function Targets({ targetSequences }: TargetsProps) {
     return (
         <div className="flex flex-row items-center gap-3 w-fit">
             {targetSequences.map((targetSequence, i) => (
-                <Target fruits={targetSequence} bgColor={bg_colors[i]} />
+                <Target fruits={targetSequence} bgColor={bg_colors[i]} key={i} />
             ))}
         </div>
     );

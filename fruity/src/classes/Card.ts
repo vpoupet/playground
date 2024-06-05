@@ -102,7 +102,7 @@ export const CARDS = [
 
 // cards should already be shuffled
 export function makeSequence(cards: Card[]): FruitName[] {
-    type Action = "side" | "over" | "under";
+    type Action = "after" | "over" | "under";
 
     const sequence: FruitName[] = [];
     let canHideLast: boolean;
@@ -128,7 +128,7 @@ export function makeSequence(cards: Card[]): FruitName[] {
         }
 
         const availableActions: Set<Action> = new Set([
-            "side",
+            "after",
             "over",
             "under",
         ]);
@@ -139,7 +139,7 @@ export function makeSequence(cards: Card[]): FruitName[] {
             availableActions.delete("under");
         }
         if (card.front.fruit1 === "pineapple") {
-            availableActions.delete("side");
+            availableActions.delete("after");
             availableActions.delete("over");
         }
         if (card.front.fruit2 === "pineapple" && cards.length > 0) {
@@ -148,7 +148,7 @@ export function makeSequence(cards: Card[]): FruitName[] {
         }
         if (sequence[sequence.length - 1] === "pineapple") {
             // last pineapple needs to be hidden
-            availableActions.delete("side");
+            availableActions.delete("after");
             availableActions.delete("under");
         }
         if (sequence[sequence.length - 1] === "banana") {
@@ -157,7 +157,7 @@ export function makeSequence(cards: Card[]): FruitName[] {
         }
 
         switch (randomElement(availableActions)) {
-            case "side":
+            case "after":
                 sequence.push(card.front.fruit1);
                 sequence.push(card.front.fruit2);
                 canHideLast = true;
@@ -172,6 +172,9 @@ export function makeSequence(cards: Card[]): FruitName[] {
                 sequence.push(card.front.fruit2);
                 canHideLast = false;
                 break;
+            default:
+                // no action available, retry card with different orientation
+                cards.unshift(card);
         }
     }
     return sequence;
