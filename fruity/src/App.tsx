@@ -29,7 +29,7 @@ function App() {
 
     return (
         <div className="flex flex-col gap-4 items-center">
-            <div className="font-kavoon text-6xl bg-gradient-to-r from-red-500 via-amber-500 to-orange-500 inline-block text-transparent bg-clip-text">
+            <div className="font-kavoon text-6xl text-green-900">
                 Fruity ASAP!
             </div>
             <div className="flex gap-4">
