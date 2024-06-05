@@ -6,7 +6,7 @@ export type FruitName =
     | "pineapple"
     | "strawberry"
     | "watermelon";
-import { shuffle, randomBit, randomInRange, randomElement } from "../utils";
+import { randomBit, randomInt, randomElement, shuffled } from "../utils";
 
 export class CardFace {
     fruit1: FruitName;
@@ -173,26 +173,44 @@ export function makeSequence(cards: Card[]): FruitName[] {
                 canHideLast = false;
                 break;
             default:
-                // no action available, retry card with different orientation
-                cards.unshift(card);
+                // No action available (last fruit was a pineapple and card's first fruit is a pineapple)
+                // Flip the card, and if it's still a pineapple first, rotate it. The card can now be placed over the last pineapple
+                card.flip();
+                if (card.front.fruit1 === "pineapple") {
+                    card.rotate();
+                }
+                sequence.pop();
+                sequence.push(card.front.fruit1);
+                sequence.push(card.front.fruit2);
+                canHideLast = true;
         }
     }
     return sequence;
 }
 
-export function makeTargetSequences(): FruitName[][] {
-    const cards = CARDS.slice();
-    shuffle(cards);
-
-    const sequences: FruitName[][] = [];
-    while (cards.length > 0) {
-        let nbCards = randomInRange(2, cards.length + 1);
-        if (nbCards == cards.length - 1) {
-            nbCards = cards.length;
-        }
-        sequences.push(makeSequence(cards.splice(0, nbCards)));
+function makeTargetSequencesAux(
+    cards: Card[],
+    max_length: number = Infinity
+): FruitName[][] {
+    if (cards.length === 0) {
+        return [];
     }
 
-    shuffle(sequences);
-    return sequences;
+    let nbCards = randomInt(2, cards.length);
+    if (nbCards == cards.length - 1) {
+        nbCards = cards.length;
+    }
+    const sequenceCards = cards.splice(0, nbCards);
+    const sequence = makeSequence(sequenceCards.slice());
+    if (sequence.length <= max_length) {
+        return [sequence, ...makeTargetSequences(cards, max_length)];
+    } else {
+        cards.unshift(...sequenceCards);
+        return makeTargetSequences(cards, max_length);
+    }
+}
+
+export function makeTargetSequences(cards: Card[], max_length: number = Infinity): FruitName[][] {
+    cards = shuffled(cards);
+    return shuffled(makeTargetSequencesAux(cards.slice(), max_length));
 }

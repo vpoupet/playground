@@ -1,4 +1,4 @@
-import { shuffle } from "../utils";
+import { shuffled } from "../utils";
 import { FruitName } from "../types";
 import { Target } from "./Target";
 
@@ -15,17 +15,17 @@ export const BG_COLORS = [
     "cyan",
     "blue",
     "violet",
-    "fuchsia",
-    "rose",
+    // "fuchsia",
+    // "rose",
 ];
 
 export function Targets({ targetSequences }: TargetsProps) {
-    const bg_colors = shuffle(BG_COLORS);
+    const bg_colors = shuffled(BG_COLORS);
 
     return (
         <div className="flex flex-row items-center gap-3 w-fit">
             {targetSequences.map((targetSequence, i) => (
-                <Target fruits={targetSequence} bgColor={bg_colors[i]} key={i} />
+                <Target fruits={targetSequence} bgColor={bg_colors[i % bg_colors.length]} key={i} />
             ))}
         </div>
     );
