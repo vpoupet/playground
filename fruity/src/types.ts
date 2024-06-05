@@ -1,0 +1,1 @@
+export type FruitName = "banana" | "dragonfruit" | "kiwi" | "mango" | "pineapple" | "strawberry" | "watermelon";
