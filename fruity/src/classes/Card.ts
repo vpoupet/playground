@@ -6,7 +6,9 @@ export type FruitName =
     | "pineapple"
     | "strawberry"
     | "watermelon";
-import { randomBit, randomInt, randomElement, shuffled } from "../utils";
+import { randomBit, randomInt, randomElement, shuffled, last } from "../utils";
+
+type CardPosition = "after" | "over" | "under";
 
 export class CardFace {
     fruit1: FruitName;
@@ -25,6 +27,13 @@ export class Card {
     constructor(face1: CardFace, face2: CardFace) {
         this.front = face1;
         this.back = face2;
+    }
+
+    copy(): Card {
+        return new Card(
+            new CardFace(this.front.fruit1, this.front.fruit2),
+            new CardFace(this.back.fruit1, this.back.fruit2)
+        );
     }
 
     flip(): void {
@@ -69,6 +78,16 @@ export class Card {
     }
 }
 
+export class PlacedCard {
+    card: Card;
+    position: CardPosition;
+
+    constructor(card: Card, position: CardPosition) {
+        this.card = card.copy();
+        this.position = position;
+    }
+}
+
 export const CARDS = [
     new Card(
         new CardFace("pineapple", "dragonfruit"),
@@ -100,12 +119,56 @@ export const CARDS = [
     ),
 ];
 
-// cards should already be shuffled
-export function makeSequence(cards: Card[]): FruitName[] {
-    type Action = "after" | "over" | "under";
+export class CardsSequence {
+    cards: PlacedCard[];
 
-    const sequence: FruitName[] = [];
-    let canHideLast: boolean;
+    constructor(cards: PlacedCard[]) {
+        this.cards = cards;
+    }
+
+    getFruitsList(): FruitName[] {
+        const fruits: FruitName[] = [];
+        for (const placedCard of this.cards) {
+            switch (placedCard.position) {
+                case "after":
+                    fruits.push(placedCard.card.front.fruit1);
+                    fruits.push(placedCard.card.front.fruit2);
+                    break;
+                case "over":
+                    fruits.pop();
+                    fruits.push(placedCard.card.front.fruit1);
+                    fruits.push(placedCard.card.front.fruit2);
+                    break;
+                case "under":
+                    fruits.push(placedCard.card.front.fruit2);
+                    break;
+            }
+        }
+        return fruits;
+    }
+
+    getLength(): number {
+        let length = 0;
+        for (const placedCard of this.cards) {
+            switch (placedCard.position) {
+                case "after":
+                    length += 2;
+                    break;
+                case "over":
+                    length += 1;
+                    break;
+                case "under":
+                    length += 1;
+                    break;
+            }
+        }
+        return length;
+    }
+}
+
+// cards should already be shuffled
+export function makeSequence(cards: Card[]): CardsSequence {
+    const placedCards: PlacedCard[] = [];
 
     const firstCard = cards.shift();
     if (firstCard === undefined) {
@@ -114,9 +177,7 @@ export function makeSequence(cards: Card[]): FruitName[] {
 
     firstCard.randomize();
     firstCard.setPineappleStart();
-    sequence.push(firstCard.front.fruit1);
-    sequence.push(firstCard.front.fruit2);
-    canHideLast = true;
+    placedCards.push(new PlacedCard(firstCard, "after"));
 
     while (cards.length > 0) {
         const card = cards.shift()!;
@@ -127,71 +188,55 @@ export function makeSequence(cards: Card[]): FruitName[] {
             card.rotate();
         }
 
-        const availableActions: Set<Action> = new Set([
+        const availablePositions: Set<CardPosition> = new Set([
             "after",
             "over",
             "under",
         ]);
-        if (!canHideLast) {
-            availableActions.delete("over");
+        if (last(placedCards).position === "under") {
+            availablePositions.delete("over");
         }
         if (card.front.fruit1 === "banana") {
-            availableActions.delete("under");
+            availablePositions.delete("under");
         }
         if (card.front.fruit1 === "pineapple") {
-            availableActions.delete("after");
-            availableActions.delete("over");
+            availablePositions.delete("after");
+            availablePositions.delete("over");
         }
         if (card.front.fruit2 === "pineapple" && cards.length > 0) {
             // pineapple needs to be hidden by next card
-            availableActions.delete("under");
+            availablePositions.delete("under");
         }
-        if (sequence[sequence.length - 1] === "pineapple") {
+        if (last(placedCards).card.front.fruit2 === "pineapple") {
             // last pineapple needs to be hidden
-            availableActions.delete("after");
-            availableActions.delete("under");
+            availablePositions.delete("after");
+            availablePositions.delete("under");
         }
-        if (sequence[sequence.length - 1] === "banana") {
+        if (last(placedCards).card.front.fruit1 === "banana") {
             // last banana cannot be hidden
-            availableActions.delete("over");
+            availablePositions.delete("over");
         }
 
-        switch (randomElement(availableActions)) {
-            case "after":
-                sequence.push(card.front.fruit1);
-                sequence.push(card.front.fruit2);
-                canHideLast = true;
-                break;
-            case "over":
-                sequence.pop();
-                sequence.push(card.front.fruit1);
-                sequence.push(card.front.fruit2);
-                canHideLast = true;
-                break;
-            case "under":
-                sequence.push(card.front.fruit2);
-                canHideLast = false;
-                break;
-            default:
-                // No action available (last fruit was a pineapple and card's first fruit is a pineapple)
-                // Flip the card, and if it's still a pineapple first, rotate it. The card can now be placed over the last pineapple
-                card.flip();
-                if (card.front.fruit1 === "pineapple") {
-                    card.rotate();
-                }
-                sequence.pop();
-                sequence.push(card.front.fruit1);
-                sequence.push(card.front.fruit2);
-                canHideLast = true;
+        if (availablePositions.size === 0) {
+            // No available position (last fruit was a pineapple and card's first fruit is a pineapple)
+            // Flip the card, and if it's still a pineapple first, rotate it. The card can now be placed over the last pineapple
+            card.flip();
+            if (card.front.fruit1 === "pineapple") {
+                card.rotate();
+            }
+            availablePositions.add("over");
         }
+
+        const position = randomElement(availablePositions);
+        placedCards.push(new PlacedCard(card, position));
     }
-    return sequence;
+    return new CardsSequence(placedCards);
 }
 
 function makeTargetSequencesAux(
     cards: Card[],
     max_length: number = Infinity
-): FruitName[][] {
+): CardsSequence[] {
     if (cards.length === 0) {
         return [];
     }
@@ -202,7 +247,7 @@ function makeTargetSequencesAux(
     }
     const sequenceCards = cards.splice(0, nbCards);
     const sequence = makeSequence(sequenceCards.slice());
-    if (sequence.length <= max_length) {
+    if (sequence.getLength() <= max_length) {
         return [sequence, ...makeTargetSequences(cards, max_length)];
     } else {
         cards.unshift(...sequenceCards);
@@ -210,7 +255,10 @@ function makeTargetSequencesAux(
     }
 }
 
-export function makeTargetSequences(cards: Card[], max_length: number = Infinity): FruitName[][] {
+export function makeTargetSequences(
+    cards: Card[],
+    max_length: number = Infinity
+): CardsSequence[] {
     cards = shuffled(cards);
     return shuffled(makeTargetSequencesAux(cards.slice(), max_length));
 }

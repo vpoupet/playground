@@ -20,3 +20,7 @@ export function randomInt(min: number, max: number): number {
 export function randomBit(): boolean {
     return Math.random() < 0.5;
 }
+
+export function last<T>(array: T[]): T {
+    return array[array.length - 1];
+}

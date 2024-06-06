@@ -6,6 +6,7 @@ import { Targets } from "./components/Targets";
 function App() {
     const [nbSets, setNbSets] = useState(1);
     const [targetSequences, setTargetSequences] = useState(generateSequences());
+    const [showSolutions, setShowSolutions] = useState(false);
 
     useEffect(() => {
         refreshSequences();
@@ -27,6 +28,10 @@ function App() {
         setNbSets(parseInt(event.target.value));
     }
 
+    function toggleSolution(event: React.ChangeEvent<HTMLInputElement>) {
+        setShowSolutions(event.target.checked);
+    }
+
     return (
         <div className="flex flex-col gap-4 items-center">
             <div className="font-kavoon text-6xl text-green-900">
@@ -45,9 +50,10 @@ function App() {
                     <option value="3">3 sets</option>
                     <option value="4">4 sets</option>
                 </select>
+                <span><input type="checkbox" onChange={toggleSolution} checked={showSolutions} /> Show solution</span>
             </div>
             <div className="w-full flex flex-col items-center">
-                <Targets targetSequences={targetSequences} />
+                <Targets targetSequences={targetSequences} showSolutions={showSolutions} />
             </div>
         </div>
     );
