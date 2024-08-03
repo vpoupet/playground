@@ -53,7 +53,7 @@ export default function Terminal(props: TerminalProps) {
                 ))}
             </pre>
             <div className="scanlines" />
-            <img src="/screen_bezel.png" alt="screen_bezel" className="bezel" />
+            <img src="./screen_bezel.png" alt="screen_bezel" className="bezel" />
         </div>
     );
 }
