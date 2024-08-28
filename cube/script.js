@@ -382,7 +382,6 @@ class Cube {
 
         const m = new Move(axisIndex, rotationAngle);
         this.animateMove(m);
-        this.addMove(m);
     }
 
     /**
@@ -584,4 +583,3 @@ function endTouch(event) {
         currentTouch = undefined;
     }
 }
-
